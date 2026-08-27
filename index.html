@@ -1,0 +1,2057 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>TCE - The Competitive Edge | Coaching Institute</title>
+<meta name="description" content="TCE - The Competitive Edge: WBP, KP SI, SSC GD Constable coaching with CBT mock tests, PYQs, quizzes, study materials and live batches.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%23F59E0B%22>T</text></svg>">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          ink: '#0B0B0B', panel: '#111827', panel2: '#161f2e',
+          gold: { DEFAULT: '#F59E0B', dark: '#D97706', light: '#FBBF24' },
+          silver: '#94A3B8'
+        },
+        fontFamily: { sans: ['Inter','system-ui','sans-serif'], display: ['Poppins','Inter','sans-serif'] }
+      }
+    }
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&family=Noto+Sans+Bengali:wght@400;600;700&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+<style>
+  :root{ --bg:#0B0B0B; --panel:#111827; --panel2:#161f2e; --text:#FFFFFF; --muted:#94A3B8; --border:rgba(217,119,6,0.35); }
+  html.light{ --bg:#FBF9F3; --panel:#FFFFFF; --panel2:#F6F1E4; --text:#111111; --muted:#57534E; --border:rgba(217,119,6,0.5); }
+  *{ scrollbar-width: thin; scrollbar-color: #D97706 transparent; }
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background: linear-gradient(180deg,#F59E0B,#D97706); border-radius: 8px; }
+  body{ background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; transition: background .3s ease,color .3s ease; }
+  .bn{ font-family:'Noto Sans Bengali','Inter',sans-serif; }
+  .font-display{ font-family:'Poppins','Inter',sans-serif; }
+  .gold-text{ background: linear-gradient(135deg,#F59E0B,#D97706,#FBBF24); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .gold-grad{ background: linear-gradient(135deg,#F59E0B,#D97706,#FBBF24); }
+  .card{ background:var(--panel); border:1px solid var(--border); position:relative; }
+  .card2{ background:var(--panel2); }
+
+  .glow-border{
+    border:1px solid var(--border); border-top:1px solid rgba(251,191,36,0.65); border-radius:1rem; position:relative;
+    box-shadow: 0 1px 0 0 rgba(251,191,36,0.25) inset, 0 2px 6px -2px rgba(0,0,0,0.55), 0 14px 28px -14px rgba(0,0,0,0.65), 0 10px 30px -14px rgba(245,158,11,0.22);
+    transform: translateY(0) translateZ(0);
+    transition: transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s cubic-bezier(.2,.8,.2,1), border-color .28s ease;
+    will-change: transform, box-shadow;
+  }
+  .glow-border::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 40%); opacity:.6; }
+  .glow-border:hover{ transform: translateY(-4px) translateZ(0); border-color: rgba(245,158,11,0.7);
+    box-shadow: 0 1px 0 0 rgba(251,191,36,0.45) inset, 0 4px 10px -2px rgba(0,0,0,0.6), 0 26px 48px -18px rgba(0,0,0,0.7), 0 18px 46px -12px rgba(245,158,11,0.4); }
+  .glow-border:active{ transform: translateY(-1px) scale(0.98) translateZ(0);
+    box-shadow: 0 1px 0 0 rgba(251,191,36,0.3) inset, 0 1px 4px -1px rgba(0,0,0,0.6), 0 6px 14px -8px rgba(0,0,0,0.6), 0 4px 14px -6px rgba(245,158,11,0.3);
+    transition: transform .08s ease, box-shadow .08s ease; }
+  button.glow-border, a.glow-border{ cursor:pointer; }
+  .muted{ color:var(--muted); }
+  .tab-active{ background: linear-gradient(135deg,#F59E0B,#D97706); color:#0B0B0B; font-weight:700; }
+  .hide-scrollbar::-webkit-scrollbar{ display:none; }
+  .hide-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
+  @keyframes slideFade{ from{opacity:0; transform: translateX(20px);} to{opacity:1; transform: translateX(0);} }
+  @keyframes tickerMove{ 0%{ transform:translateX(100%);} 100%{ transform:translateX(-100%);} }
+  .ticker-track{ display:inline-block; white-space:nowrap; animation: tickerMove 32s linear infinite; }
+  .watermark-wrap{ position:relative; overflow:hidden; }
+  .watermark-wrap::before{
+    content:""; position:absolute; inset:0; background-image:url('logo.png'), none; background-repeat:repeat; background-size:140px 140px;
+    opacity:0.04; pointer-events:none; z-index:0;
+  }
+  .watermark-wrap.wm-fallback::before{ background-image:none; }
+  .watermark-wrap.wm-fallback::after{
+    content:"TCE"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:8rem; font-weight:800; color:rgba(255,255,255,0.045); letter-spacing:6px; pointer-events:none;
+    border:6px solid rgba(255,255,255,0.035); border-radius:50%; margin:auto; width:60%; height:60%; z-index:0;
+  }
+  html.light .watermark-wrap.wm-fallback::after{ color:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.035); }
+  .badge{ font-size:.65rem; padding:2px 8px; border-radius:999px; font-weight:700; letter-spacing:.03em; }
+  .fade-in{ animation: fadeIn .35s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .modal-backdrop{ background: rgba(0,0,0,0.72); backdrop-filter: blur(3px); }
+  input[type=text],input[type=email],input[type=tel],input[type=password],input[type=number],input[type=file],input[type=date],textarea,select{
+    background:var(--panel2); border:1px solid rgba(148,163,184,0.25); color:var(--text);
+  }
+  input:focus,textarea:focus,select:focus{ outline:none; border-color:#F59E0B; box-shadow:0 0 0 3px rgba(245,158,11,0.15); }
+  .palette-btn{ width:40px; height:40px; border-radius:8px; font-size:.8rem; font-weight:700; display:flex; align-items:center; justify-content:center; position:relative; }
+  ::placeholder{ color: #6b7280; }
+  .btn-gold{ background: linear-gradient(135deg,#F59E0B,#D97706); color:#0B0B0B; font-weight:700;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.35) inset, 0 6px 16px -6px rgba(245,158,11,0.55), 0 2px 4px -1px rgba(0,0,0,0.4);
+    transform: translateY(0); transition: transform .18s ease, box-shadow .18s ease, filter .18s ease; }
+  .btn-gold:hover{ filter:brightness(1.08); transform: translateY(-2px); box-shadow: 0 1px 0 rgba(255,255,255,0.4) inset, 0 12px 24px -8px rgba(245,158,11,0.6), 0 4px 8px -2px rgba(0,0,0,0.45); }
+  .btn-gold:active{ transform: translateY(0) scale(0.97); box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset, 0 3px 8px -4px rgba(245,158,11,0.5); }
+  .btn-ghost{ border:1px solid var(--border); color:var(--text); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .btn-ghost:hover{ transform: translateY(-2px); border-color: rgba(245,158,11,0.6); box-shadow: 0 10px 20px -10px rgba(245,158,11,0.35); }
+  .btn-ghost:active{ transform: translateY(0) scale(0.97); }
+  .no-tap-highlight{ -webkit-tap-highlight-color: transparent; }
+  @media print{
+    body *{ visibility:hidden; }
+    #printArea, #printArea *{ visibility:visible; }
+    #printArea{ position:absolute; left:0; top:0; width:100%; }
+  }
+</style>
+</head>
+<body class="no-tap-highlight">
+
+<!-- =============== TOP INFO BAR =============== -->
+<div class="hidden sm:block text-[11px] card2" style="border-bottom:1px solid var(--border);">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-1.5 flex flex-wrap items-center justify-between gap-2 muted">
+    <p class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3 h-3 gold-text shrink-0"></i> Near Nahata Anchal, Nahata, P.S. Gopalnagar, North 24 Parganas, West Bengal, PIN - 743290</p>
+    <p class="flex items-center gap-4">
+      <span class="flex items-center gap-1"><i data-lucide="globe" class="w-3 h-3 gold-text"></i> Tcenahata.in</span>
+      <span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3 gold-text"></i> +91 73846 44030</span>
+      <span class="flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3 gold-text"></i> tcenahata@gmail.com</span>
+    </p>
+  </div>
+</div>
+
+<!-- =============== NAVBAR =============== -->
+<header class="sticky top-0 z-40 backdrop-blur-md" style="background:color-mix(in srgb, var(--bg) 88%, transparent); border-bottom:1px solid var(--border);">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+    <div class="flex items-center gap-2 cursor-pointer" onclick="goHome()">
+      <div class="relative w-9 h-9 shrink-0">
+        <div id="logoFallback" class="w-9 h-9 rounded-lg gold-grad flex items-center justify-center font-display font-800 text-ink text-lg">T</div>
+        <img src="logo.png" alt="TCE Logo" id="logoImg"
+             class="hidden w-9 h-9 rounded-lg object-cover absolute inset-0"
+             onload="document.getElementById('logoFallback').classList.add('hidden');this.classList.remove('hidden');"
+             onerror="this.classList.add('hidden');document.getElementById('logoFallback').classList.remove('hidden');">
+      </div>
+      <div class="leading-tight">
+        <div class="font-display font-800 text-sm sm:text-base">TCE <span class="gold-text">The Competitive Edge</span></div>
+        <div class="text-[10px] muted hidden sm:block">Tcenahata.in — Target Your Dream Govt Job</div>
+      </div>
+    </div>
+
+    <nav class="hidden lg:flex items-center gap-1" id="navTabsDesktop"></nav>
+
+    <div class="flex items-center gap-2">
+      <button onclick="toggleTheme()" class="w-9 h-9 rounded-full btn-ghost flex items-center justify-center" title="Toggle theme">
+        <i data-lucide="sun-moon" class="w-4 h-4"></i>
+      </button>
+      <button onclick="openLoginModal()" id="navAuthBtn" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg btn-gold text-xs">
+        <i data-lucide="user" class="w-3.5 h-3.5"></i> Student Login
+      </button>
+      <button onclick="toggleMobileMenu()" class="lg:hidden w-9 h-9 rounded-full btn-ghost flex items-center justify-center">
+        <i data-lucide="menu" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+  <div id="mobileMenu" class="hidden lg:hidden px-4 pb-3 flex flex-col gap-1" style="border-top:1px solid var(--border);"></div>
+</header>
+
+<!-- =============== TICKER =============== -->
+<div class="gold-grad text-ink text-xs sm:text-sm font-semibold overflow-hidden py-1.5">
+  <div class="ticker-track" id="tickerText">Loading announcements...</div>
+</div>
+
+<!-- =============== HERO CAROUSEL =============== -->
+<section class="relative">
+  <div id="heroCarousel" class="relative h-[340px] sm:h-[420px] overflow-hidden"></div>
+  <div id="heroDots" class="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-20"></div>
+</section>
+
+<!-- =============== MAIN TAB SECTIONS =============== -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+  <div id="tabContent"></div>
+</main>
+
+<!-- =============== MENTORS SECTION =============== -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+  <div class="text-center mb-8">
+    <p class="text-xs tracking-widest muted uppercase mb-1">Meet the team</p>
+    <h2 class="font-display font-800 text-2xl sm:text-3xl">Our <span class="gold-text">Expert Mentors</span></h2>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="mentorsGrid"></div>
+</section>
+
+<!-- =============== FOOTER =============== -->
+<footer class="mt-10" style="border-top:1px solid var(--border); background:var(--panel);">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-8 h-8 rounded-lg gold-grad flex items-center justify-center font-display font-800 text-ink">T</div>
+        <span class="font-display font-800">TCE - The Competitive Edge</span>
+      </div>
+      <p class="muted text-sm">Premier coaching institute for WBP, KP SI, SSC GD Constable, Railway (RRB) and other competitive government exams.</p>
+      <p class="text-xs gold-text font-semibold mt-2 flex items-center gap-1"><i data-lucide="globe" class="w-3.5 h-3.5"></i> Tcenahata.in</p>
+    </div>
+    <div>
+      <h4 class="font-semibold mb-3 text-sm uppercase tracking-wide muted">Quick Links</h4>
+      <div class="flex flex-col gap-2 text-sm" id="footerLinks"></div>
+    </div>
+    <div>
+      <h4 class="font-semibold mb-3 text-sm uppercase tracking-wide muted">Faculty Contact</h4>
+      <div class="flex flex-col gap-3 text-sm">
+        <a href="https://wa.me/919749587349?text=Hello%20Sir%2C%20I%20want%20to%20know%20more%20about%20TCE%20classes" target="_blank" class="flex items-center gap-2 muted hover:text-current">
+          <i data-lucide="message-circle" class="w-3.5 h-3.5 text-[#25D366] shrink-0"></i>
+          <span>Tanujoy Mallick <span class="block text-xs">+91 97495 87349</span></span>
+        </a>
+        <a href="https://wa.me/917384644030?text=Hello%20Sir%2C%20I%20want%20to%20know%20more%20about%20TCE%20classes" target="_blank" class="flex items-center gap-2 muted hover:text-current">
+          <i data-lucide="message-circle" class="w-3.5 h-3.5 text-[#25D366] shrink-0"></i>
+          <span>Prakash Sarkar <span class="block text-xs">+91 73846 44030</span></span>
+        </a>
+      </div>
+    </div>
+    <div>
+      <h4 class="font-semibold mb-3 text-sm uppercase tracking-wide muted">Contact</h4>
+      <p class="text-sm gold-text font-semibold flex items-center gap-2 mb-2"><i data-lucide="globe" class="w-3.5 h-3.5"></i> Tcenahata.in</p>
+      <p class="text-sm muted flex items-start gap-2 mb-2"><i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i> Near Nahata Anchal, Nahata, P.S. Gopalnagar, North 24 Parganas, West Bengal, PIN - 743290</p>
+      <p class="text-sm muted flex items-center gap-2 mb-2"><i data-lucide="phone" class="w-3.5 h-3.5"></i> +91 73846 44030</p>
+      <p class="text-sm muted flex items-center gap-2 mb-2"><i data-lucide="mail" class="w-3.5 h-3.5"></i> tcenahata@gmail.com</p>
+      <button onclick="openAdminLogin()" class="mt-3 text-xs muted underline">Admin Login</button>
+    </div>
+  </div>
+  <div class="text-center text-xs muted pb-6">© 2026 TCE - The Competitive Edge. All rights reserved.</div>
+</footer>
+
+<!-- =============== FLOATING ACTION BUTTONS =============== -->
+<div class="fixed bottom-5 right-5 z-40 flex flex-col gap-3">
+  <button id="installBtn" onclick="triggerInstall()" class="hidden items-center gap-2 px-4 py-3 rounded-full btn-gold shadow-lg text-xs font-bold">
+    <i data-lucide="download" class="w-4 h-4"></i> 📲 Install App
+  </button>
+  <a href="https://wa.me/917384644030?text=Hello%20Sir%2C%20I%20want%20to%20know%20more%20about%20TCE%20batches" target="_blank"
+     class="flex items-center gap-2 px-4 py-3 rounded-full bg-[#25D366] text-white shadow-lg text-xs font-bold">
+    <i data-lucide="message-circle" class="w-4 h-4"></i> WhatsApp Support
+  </a>
+</div>
+
+<div id="modalRoot"></div>
+<div id="printArea" class="hidden"></div>
+
+<script>
+/* =========================================================================
+   FIREBASE CONFIGURATION (replace with real project credentials to go live)
+========================================================================= */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT.firebaseapp.com", projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com", messagingSenderId: "YOUR_SENDER_ID", appId: "YOUR_APP_ID"
+};
+const DEMO_MODE = true; // set false after filling in real firebaseConfig above
+let fbApp=null, fbAuth=null, fbDB=null, fbStorage=null;
+if(!DEMO_MODE){
+  try{ fbApp = firebase.initializeApp(firebaseConfig); fbAuth = firebase.auth(); fbDB = firebase.firestore(); fbStorage = firebase.storage(); }
+  catch(e){ console.warn('Firebase init failed, using demo mode', e); }
+}
+
+/* =========================================================================
+   ADMIN CREDENTIALS (password can be overridden via Admin Settings tab)
+========================================================================= */
+const ADMIN_EMAIL = "nhkprakash02@gmail.com";
+const ADMIN_PASSWORD_DEFAULT = "A@a123456";
+function getAdminPassword(){ return localStorage.getItem('tce_admin_pw_override') || ADMIN_PASSWORD_DEFAULT; }
+function setAdminPassword(pw){ localStorage.setItem('tce_admin_pw_override', pw); }
+
+/* =========================================================================
+   LOCAL "DATABASE"
+========================================================================= */
+const LS_KEY = 'tce_db_v2';
+const CUR_KEY = 'tce_current_user_v1';
+const ADM_KEY = 'tce_admin_session_v1';
+function uid(prefix){ return prefix+'_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
+function priceLabel(p){ return '₹'+p+' / Month'; }
+
+function seedDB(){
+  const subjects = ['math','english','reasoning','gk','full'];
+  const subjectLabel = {math:'Math',english:'English',reasoning:'Reasoning',gk:'GK',full:'Full Mock'};
+
+  function sampleQ(subject, n){
+    const banks = {
+      math:[
+        {en:"What is 15% of 200?", bn:"200 এর 15% কত?", opts:["20","25","30","35"], correct:2, exp:"15% of 200 = 30."},
+        {en:"Find the next number: 2, 6, 12, 20, ?", bn:"পরবর্তী সংখ্যাটি নির্ণয় করুন: 2, 6, 12, 20, ?", opts:["28","30","26","32"], correct:0, exp:"+8 pattern: 20+8=28."},
+        {en:"A train 100m long crosses a pole in 10s. Find its speed (m/s).", bn:"একটি 100 মিটার লম্বা ট্রেন একটি খুঁটি অতিক্রম করে 10 সেকেন্ডে। গতি নির্ণয় করুন (মি/সে)।", opts:["8","10","12","15"], correct:1, exp:"Speed = distance/time = 100/10 = 10 m/s."},
+        {en:"Simplify: 7 + 3 × 2", bn:"সরল করুন: 7 + 3 × 2", opts:["20","13","17","10"], correct:1, exp:"BODMAS: 3×2=6, 7+6=13."},
+        {en:"If cost price is ₹80 and selling price is ₹100, find profit %.", bn:"ক্রয়মূল্য ৮০ টাকা এবং বিক্রয়মূল্য ১০০ টাকা হলে লাভের শতাংশ কত?", opts:["20%","25%","15%","30%"], correct:1, exp:"Profit = 20, %=20/80×100=25%."}
+      ],
+      english:[
+        {en:"Choose the correct synonym of 'Happy'.", bn:"", opts:["Sad","Joyful","Angry","Tired"], correct:1, exp:"Joyful means happy."},
+        {en:"Fill in the blank: She ___ to school every day.", bn:"", opts:["go","goes","going","gone"], correct:1, exp:"Subject-verb agreement: She goes."},
+        {en:"Choose the correctly spelled word.", bn:"", opts:["Recieve","Receive","Receeve","Receve"], correct:1, exp:"'Receive' - i before e except after c."},
+        {en:"Antonym of 'Increase' is:", bn:"", opts:["Decrease","Grow","Expand","Rise"], correct:0, exp:"Decrease is opposite of increase."},
+        {en:"Identify the noun in: 'The dog ran fast.'", bn:"", opts:["ran","fast","dog","the"], correct:2, exp:"'Dog' is the noun."}
+      ],
+      reasoning:[
+        {en:"Find the odd one out: Apple, Mango, Potato, Banana", bn:"অসঙ্গতিটি খুঁজুন: Apple, Mango, Potato, Banana", opts:["Apple","Mango","Potato","Banana"], correct:2, exp:"Potato is a vegetable, others are fruits."},
+        {en:"If A=1, B=2, C=3... what is the value of 'CAB'?", bn:"", opts:["321","213","312","6"], correct:2, exp:"C=3,A=1,B=2 -> 312."},
+        {en:"Complete the series: 3, 9, 27, 81, ?", bn:"ধারাটি সম্পূর্ণ করুন: 3, 9, 27, 81, ?", opts:["162","243","324","729"], correct:1, exp:"Each term ×3, 81×3=243."},
+        {en:"Pointing to a man, a woman says 'He is the son of my mother's mother'. How is he related to her?", bn:"", opts:["Brother","Uncle","Cousin","Father"], correct:0, exp:"He is her brother (both grandchildren of same grandmother)."},
+        {en:"Which number will replace the question mark? 5,10,20,40,?", bn:"", opts:["60","70","80","90"], correct:2, exp:"Each term doubles: 40×2=80."}
+      ],
+      gk:[
+        {en:"Who is known as the 'Father of the Nation' in India?", bn:"ভারতের 'জাতির পিতা' কাকে বলা হয়?", opts:["Nehru","Gandhi","Bose","Patel"], correct:1, exp:"Mahatma Gandhi."},
+        {en:"What is the capital of West Bengal?", bn:"পশ্চিমবঙ্গের রাজধানী কী?", opts:["Howrah","Kolkata","Darjeeling","Asansol"], correct:1, exp:"Kolkata is the capital of West Bengal."},
+        {en:"The Indian Constitution was adopted on:", bn:"ভারতের সংবিধান কবে গৃহীত হয়?", opts:["15 Aug 1947","26 Jan 1950","26 Nov 1949","2 Oct 1950"], correct:2, exp:"Adopted on 26 Nov 1949, enforced 26 Jan 1950."},
+        {en:"Which is the longest river in India?", bn:"ভারতের দীর্ঘতম নদী কোনটি?", opts:["Yamuna","Ganga","Godavari","Brahmaputra"], correct:1, exp:"River Ganga is the longest in India."},
+        {en:"West Bengal Police was established under which Act?", bn:"", opts:["Police Act 1861","Police Act 1900","Police Act 1947","Police Act 1975"], correct:0, exp:"Indian Police Act, 1861."},
+        {en:"Current Affairs: Which state hosted the 2026 National Games? (Demo Q)", bn:"", opts:["Uttarakhand","West Bengal","Kerala","Gujarat"], correct:0, exp:"Demo current affairs sample — replace via Admin GK Uploader."}
+      ]
+    };
+    const src = subject==='full' ? [].concat(banks.math.slice(0,2),banks.english.slice(0,2),banks.reasoning.slice(0,1)) : banks[subject];
+    const out=[];
+    for(let i=0;i<n;i++){
+      const q = src[i%src.length];
+      out.push({
+        id: uid('q'), textEn: q.en, textBn: q.bn||"",
+        options: q.opts.map((o,idx)=>({key:String.fromCharCode(65+idx), textEn:o, textBn:""})),
+        correct: String.fromCharCode(65+q.correct), explanation: q.exp, solutionImg:""
+      });
+    }
+    return out;
+  }
+
+  const mockTests = {};
+  subjects.forEach(sub=>{
+    mockTests[sub] = [1,2,3].map(n=>({
+      id: uid('mt'), subject: sub, title: `${subjectLabel[sub]} Mock Test ${n}`, isDemo: n===1, examCategory:"All Exams",
+      durationMin: sub==='full' ? 60 : 20, marksCorrect: 2, marksWrong: 0.5,
+      questions: sampleQ(sub, sub==='full'?10:8)
+    }));
+  });
+
+  const quizPool = sampleQ('gk', 12).map(q=>({...q, subject:'gk'}));
+
+  // Tag a sample test per subject as Railway (RRB) specific so the exam-category filter has real demo data.
+  if(mockTests.math[1]) mockTests.math[1].examCategory = "Railway (RRB)";
+  if(mockTests.gk[1]) mockTests.gk[1].examCategory = "Railway (RRB)";
+  if(mockTests.reasoning[1]) mockTests.reasoning[1].examCategory = "Railway (RRB)";
+
+  const pyqSets = [
+    {id:uid('pyq'), title:"WBP Constable PYQ 2024 - Shift 1", examCategory:"WBP Constable", year:"2024", durationMin:30, marksCorrect:1, marksWrong:0.25, questions: sampleQ('gk',6)},
+    {id:uid('pyq'), title:"SSC GD Constable PYQ 2023 - Shift 2", examCategory:"SSC GD", year:"2023", durationMin:30, marksCorrect:1, marksWrong:0.25, questions: sampleQ('reasoning',6)},
+    {id:uid('pyq'), title:"KP SI PYQ 2022", examCategory:"KP SI", year:"2022", durationMin:30, marksCorrect:1, marksWrong:0.25, questions: sampleQ('math',6)},
+    {id:uid('pyq'), title:"Railway (RRB) NTPC PYQ 2024", examCategory:"Railway (RRB)", year:"2024", durationMin:30, marksCorrect:1, marksWrong:0.25, questions: sampleQ('math',6)},
+    {id:uid('pyq'), title:"Railway (RRB) Group D PYQ 2023", examCategory:"Railway (RRB)", year:"2023", durationMin:30, marksCorrect:1, marksWrong:0.25, questions: sampleQ('gk',6)}
+  ];
+
+  return {
+    examCategories: ["WBP Constable","KP SI","SSC GD","Railway (RRB)","WBPSC Clerkship"],
+    banners: [
+      {title:"WBP Constable & SI Batch", subtitle:"Complete syllabus coverage with daily mock tests", tag:"Admissions Open", grad:"from-amber-600 via-yellow-500 to-orange-600"},
+      {title:"KP SI Special Batch", subtitle:"Kolkata Police SI - Expert faculty & test series", tag:"Limited Seats", grad:"from-yellow-600 via-amber-500 to-yellow-400"},
+      {title:"SSC GD Constable Batch", subtitle:"Crack SSC GD with focused practice & PYQs", tag:"New Batch", grad:"from-orange-600 via-amber-500 to-yellow-500"},
+      {title:"Railway (RRB) NTPC / Group D / ALP Batch", subtitle:"Complete Railway exam preparation with free PYQs & daily quizzes", tag:"Now Live", grad:"from-amber-500 via-orange-500 to-yellow-600"}
+    ],
+    ticker: "🚨 Now Coaching for WBP • KP (Kolkata Police) • SSC GD • Railway (RRB / NTPC / Group D / ALP) • WBPSC — All-in-one CBT Mock Test Platform!  🎉 New batches starting soon — Enroll now @ ₹300 only!  📢 100% Free PYQs, Daily Quizzes & Study Materials for everyone.  📝 Weekly test series every Sunday.",
+    students: [
+      {id:uid('st'), name:"Rahul Das", phone:"9800011122", email:"rahul@example.com", address:"Siliguri, WB", joinDate:"2026-06-12", paymentStatus:"Approved", batch:"WBP Special"},
+      {id:uid('st'), name:"Priya Sarkar", phone:"9800033344", email:"priya@example.com", address:"Jalpaiguri, WB", joinDate:"2026-07-02", paymentStatus:"Pending", batch:"SSC GD"},
+      {id:uid('st'), name:"Amit Roy", phone:"9800055566", email:"amit@example.com", address:"Cooch Behar, WB", joinDate:"2026-07-15", paymentStatus:"Blocked", batch:"KP SI"}
+    ],
+    mockTests, quizPool, pyqSets,
+    submissions: [],
+    materials: {
+      math:[{id:uid('mat'), title:"Math Formula Booklet (Demo)", url:"", views:0}],
+      english:[{id:uid('mat'), title:"English Grammar Notes (Demo)", url:"", views:0}],
+      reasoning:[{id:uid('mat'), title:"Reasoning Shortcuts (Demo)", url:"", views:0}],
+      gk:[{id:uid('mat'), title:"GK Capsule 2026 (Demo)", url:"", views:0}],
+      currentAffairs:[{id:uid('mat'), title:"Current Affairs — August 2026 (Demo)", url:"", views:0}]
+    },
+    notices: [
+      {id:uid('nt'), title:"WBP Constable Recruitment 2026 Notification Out", date:"2026-08-20", body:"West Bengal Police has released the recruitment notification. Check eligibility and apply before the deadline."},
+      {id:uid('nt'), title:"Sunday Full Mock Test Schedule", date:"2026-08-24", body:"Full length mock test every Sunday 10 AM. Enrolled students will get notification via WhatsApp."},
+      {id:uid('nt'), title:"SSC GD Constable Exam Date Announced", date:"2026-08-18", body:"SSC has announced the tentative CBT exam dates for GD Constable recruitment."}
+    ],
+    inquiries: [],
+    batches: [
+      {id:uid('bt'), name:"Target WBP / SSC Special Batch", price:300, active:true, examCategory:"WBP Constable",
+        features:["All premium mock tests unlocked","Full study material library","Live doubt-clearing WhatsApp group","Rank & performance analytics"],
+        timetable:[["Mon / Wed / Fri","Math & Reasoning"],["Tue / Thu","English & GK"],["Sunday","Full Mock Test"]]},
+      {id:uid('bt'), name:"KP SI Special Batch", price:300, active:true, examCategory:"KP SI",
+        features:["SI-specific syllabus coverage","Weekly test series","Expert mentor support"],
+        timetable:[["Mon / Thu","Reasoning & Math"],["Wed / Sat","GK & English"]]},
+      {id:uid('bt'), name:"Railway (RRB) NTPC / Group D / ALP Special Batch", price:300, active:true, examCategory:"Railway (RRB)",
+        features:["Complete RRB NTPC, Group D & ALP syllabus","Railway-specific mock tests","Free PYQs & daily GK quizzes included","Rank & performance analytics"],
+        timetable:[["Mon / Wed / Fri","Math & GK"],["Tue / Thu","Reasoning & General Science"],["Sunday","Full Mock Test"]]}
+    ],
+    mentors: [
+      {id:uid('mn'), name:"Tanujoy Mallick", subject:"GK & GS", phone:"919749587349", photo:""},
+      {id:uid('mn'), name:"Prakash Sarkar", subject:"Mathematics", phone:"917384644030", photo:""},
+      {id:uid('mn'), name:"Maharup Tarafder", subject:"General Science, Static GK & Current Affairs", phone:"918327416813", photo:""},
+      {id:uid('mn'), name:"Pranab Sadhukhan", subject:"Reasoning & English", phone:"917407879095", photo:""}
+    ]
+  };
+}
+
+function normalizeDB(db){
+  // Backfill fields introduced in later versions so older saved data doesn't break the UI.
+  Object.keys(db.mockTests||{}).forEach(sub=>{
+    (db.mockTests[sub]||[]).forEach(t=>{ if(!t.examCategory) t.examCategory = "All Exams"; });
+  });
+  (db.batches||[]).forEach(b=>{ if(!b.examCategory) b.examCategory = "All Exams"; b.price = 300; }); // pricing standardized portal-wide at ₹300 / Month
+  if(!db.examCategories || !db.examCategories.includes("Railway (RRB)")){
+    db.examCategories = db.examCategories || [];
+    db.examCategories = db.examCategories.filter(c=>c!=="Railway");
+    if(!db.examCategories.includes("Railway (RRB)")) db.examCategories.push("Railway (RRB)");
+  }
+  return db;
+}
+function loadDB(){
+  let raw = localStorage.getItem(LS_KEY);
+  if(!raw){ const seeded = seedDB(); localStorage.setItem(LS_KEY, JSON.stringify(seeded)); return seeded; }
+  try{
+    const parsed = JSON.parse(raw);
+    const seeded = seedDB();
+    // fill in any missing keys for backward compatibility with older saved DBs
+    Object.keys(seeded).forEach(k=>{ if(!(k in parsed)) parsed[k]=seeded[k]; });
+    return normalizeDB(parsed);
+  }catch(e){ const seeded = seedDB(); localStorage.setItem(LS_KEY, JSON.stringify(seeded)); return seeded; }
+}
+function saveDB(){ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
+let DB = loadDB();
+
+function getCurrentUser(){ try{ return JSON.parse(localStorage.getItem(CUR_KEY)||'null'); }catch(e){ return null; } }
+function setCurrentUser(u){ localStorage.setItem(CUR_KEY, JSON.stringify(u)); renderNav(); }
+function isAdmin(){ return localStorage.getItem(ADM_KEY)==='1'; }
+
+/* =========================================================================
+   NAV / TABS
+========================================================================= */
+const TABS = [
+  {id:'home', label:'Home', icon:'home'},
+  {id:'mocks', label:'Mock Tests', icon:'file-check-2'},
+  {id:'quiz', label:'Quick Quiz', icon:'zap'},
+  {id:'pyq', label:'PYQ Hub', icon:'archive'},
+  {id:'materials', label:'Study Materials', icon:'book-open'},
+  {id:'batches', label:'Batches & Fees', icon:'graduation-cap'},
+  {id:'dashboard', label:'Dashboard', icon:'layout-dashboard'},
+  {id:'notices', label:'Notices & Contact', icon:'bell'}
+];
+let activeTab = 'home';
+
+function renderNav(){
+  const user = getCurrentUser();
+  const desktop = document.getElementById('navTabsDesktop');
+  desktop.innerHTML = TABS.map(t=>`
+    <button onclick="setTab('${t.id}')" class="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${activeTab===t.id?'tab-active':'muted hover:text-current'}">
+      <i data-lucide="${t.icon}" class="w-3.5 h-3.5"></i>${t.label}
+    </button>`).join('');
+
+  const mobile = document.getElementById('mobileMenu');
+  mobile.innerHTML = TABS.map(t=>`
+    <button onclick="setTab('${t.id}');toggleMobileMenu()" class="px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 text-left ${activeTab===t.id?'tab-active':'muted'}">
+      <i data-lucide="${t.icon}" class="w-4 h-4"></i>${t.label}
+    </button>`).join('') + `
+    <button onclick="openLoginModal();toggleMobileMenu()" class="mt-2 px-3 py-2.5 rounded-lg text-sm font-semibold btn-gold flex items-center gap-2"><i data-lucide="user" class="w-4 h-4"></i> ${user?user.name:'Student Login'}</button>`;
+
+  const navAuthBtn = document.getElementById('navAuthBtn');
+  navAuthBtn.innerHTML = user ? `<i data-lucide="user-check" class="w-3.5 h-3.5"></i> ${user.name.split(' ')[0]}` : `<i data-lucide="user" class="w-3.5 h-3.5"></i> Student Login`;
+
+  const footerLinks = document.getElementById('footerLinks');
+  footerLinks.innerHTML = TABS.map(t=>`<button onclick="setTab('${t.id}')" class="text-left muted hover:text-current text-sm">${t.label}</button>`).join('');
+
+  lucide.createIcons();
+}
+function toggleMobileMenu(){ document.getElementById('mobileMenu').classList.toggle('hidden'); }
+function goHome(){ setTab('home'); }
+function setTab(id){ activeTab=id; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'}); }
+
+/* =========================================================================
+   THEME TOGGLE
+========================================================================= */
+function toggleTheme(){
+  document.documentElement.classList.toggle('light'); document.documentElement.classList.toggle('dark');
+  localStorage.setItem('tce_theme', document.documentElement.classList.contains('light')?'light':'dark');
+}
+(function initTheme(){ const saved = localStorage.getItem('tce_theme'); if(saved==='light'){ document.documentElement.classList.remove('dark'); document.documentElement.classList.add('light'); } })();
+
+/* =========================================================================
+   HERO CAROUSEL
+========================================================================= */
+let heroIdx=0, heroTimer=null;
+function renderHero(){
+  const wrap = document.getElementById('heroCarousel');
+  wrap.innerHTML = DB.banners.map((b,i)=>`
+    <div class="absolute inset-0 transition-opacity duration-700 ${i===heroIdx?'opacity-100':'opacity-0 pointer-events-none'}">
+      <div class="w-full h-full bg-gradient-to-br ${b.grad} flex items-center">
+        <div class="max-w-7xl mx-auto px-6 sm:px-10 w-full">
+          <span class="badge bg-black/30 text-white inline-block mb-3">${b.tag}</span>
+          <h1 class="font-display font-800 text-3xl sm:text-5xl text-black max-w-xl leading-tight">${b.title}</h1>
+          <p class="text-black/80 mt-3 max-w-md text-sm sm:text-base font-medium">${b.subtitle}</p>
+          <div class="flex gap-3 mt-6">
+            <button onclick="setTab('batches')" class="px-5 py-2.5 rounded-lg bg-black text-white text-sm font-bold">Enroll Now</button>
+            <button onclick="setTab('mocks')" class="px-5 py-2.5 rounded-lg bg-white/90 text-black text-sm font-bold">Try Free Mock</button>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+  document.getElementById('heroDots').innerHTML = DB.banners.map((_,i)=>`<button onclick="heroIdx=${i};renderHero()" class="w-2.5 h-2.5 rounded-full ${i===heroIdx?'bg-white':'bg-white/40'}"></button>`).join('');
+}
+function startHeroAuto(){ clearInterval(heroTimer); heroTimer = setInterval(()=>{ heroIdx=(heroIdx+1)%DB.banners.length; renderHero(); }, 4500); }
+function renderTicker(){ document.getElementById('tickerText').textContent = DB.ticker; }
+
+/* =========================================================================
+   MENTORS (Admin Managed)
+========================================================================= */
+function renderMentors(){
+  document.getElementById('mentorsGrid').innerHTML = DB.mentors.map(m=>`
+    <div class="card glow-border rounded-2xl p-5 text-center">
+      ${m.photo ? `<img src="${m.photo}" class="w-16 h-16 mx-auto rounded-full object-cover mb-3" alt="${m.name}">` : `<div class="w-16 h-16 mx-auto rounded-full gold-grad flex items-center justify-center font-display font-800 text-ink text-xl mb-3">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`}
+      <h3 class="font-display font-700 text-sm">${m.name}</h3>
+      <p class="text-xs gold-text font-semibold mt-0.5">Tutor & Mentor</p>
+      <p class="text-xs muted mt-1">${m.subject}</p>
+      <a href="https://wa.me/${m.phone}?text=Hello%20${encodeURIComponent(m.name)}%2C%20I%20want%20to%20know%20more%20about%20TCE%20classes" target="_blank"
+        class="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#25D366] text-white text-xs font-bold">
+        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp
+      </a>
+    </div>`).join('');
+  lucide.createIcons();
+}
+
+/* =========================================================================
+   MODAL HELPERS
+========================================================================= */
+function openModal(html){
+  document.getElementById('modalRoot').innerHTML = `<div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-3" onclick="if(event.target===this)closeModal()"><div class="w-full max-w-lg fade-in">${html}</div></div>`;
+  lucide.createIcons();
+}
+function openModalWide(html){
+  document.getElementById('modalRoot').innerHTML = `<div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-3" onclick="if(event.target===this)closeModal()"><div class="w-full max-w-4xl fade-in max-h-[92vh] overflow-y-auto rounded-2xl">${html}</div></div>`;
+  lucide.createIcons();
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+
+/* =========================================================================
+   AUTH
+========================================================================= */
+function openLoginModal(){
+  const user = getCurrentUser();
+  if(user){
+    openModal(`
+      <div class="card glow-border rounded-2xl p-6">
+        <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">My Account</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+        <p class="text-sm muted">Signed in as</p><p class="font-semibold">${user.name}</p><p class="text-xs muted">${user.email||user.phone}</p>
+        <div class="flex gap-2 mt-5">
+          <button onclick="closeModal();setTab('dashboard')" class="flex-1 btn-gold rounded-lg py-2.5 text-sm font-bold">Go to Dashboard</button>
+          <button onclick="logoutUser()" class="flex-1 btn-ghost rounded-lg py-2.5 text-sm font-bold">Logout</button>
+        </div>
+      </div>`);
+    return;
+  }
+  openModal(`
+    <div class="card glow-border rounded-2xl p-6">
+      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Student Login</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <button onclick="googleSignIn()" class="w-full flex items-center justify-center gap-2 border rounded-lg py-2.5 text-sm font-semibold mb-4" style="border-color:var(--border)">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.7l6-6C33.6 6.5 29.1 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.3-.3-3.5z"/></svg>
+        Continue with Google
+      </button>
+      <div class="text-center text-xs muted mb-4">— or continue with phone/email —</div>
+      <div class="space-y-3">
+        <input id="li_name" type="text" placeholder="Full Name" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="li_phone" type="tel" placeholder="Phone Number" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="li_email" type="email" placeholder="Email (optional)" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <button onclick="manualSignIn()" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">Login / Register</button>
+      </div>
+    </div>`);
+}
+function googleSignIn(){
+  if(!DEMO_MODE && fbAuth){
+    fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(res=>{
+      const u = res.user; finalizeLogin({name:u.displayName||'Student', email:u.email, phone:u.phoneNumber||''});
+    }).catch(e=>alert('Google sign-in failed: '+e.message));
+    return;
+  }
+  const name = prompt("Demo Google Sign-In\\nEnter your name to simulate Google login:");
+  if(!name) return;
+  finalizeLogin({name, email:name.toLowerCase().replace(/\\s+/g,'.')+'@gmail.com', phone:''});
+}
+function manualSignIn(){
+  const name = document.getElementById('li_name').value.trim();
+  const phone = document.getElementById('li_phone').value.trim();
+  const email = document.getElementById('li_email').value.trim();
+  if(!name||!phone){ alert('Please enter name and phone number.'); return; }
+  finalizeLogin({name,phone,email});
+}
+function finalizeLogin(profile){
+  let student = DB.students.find(s=> (profile.email && s.email===profile.email) || (profile.phone && s.phone===profile.phone));
+  if(!student){
+    student = {id:uid('st'), name:profile.name, phone:profile.phone||'', email:profile.email||'', address:'', joinDate:new Date().toISOString().slice(0,10), paymentStatus:'Not Enrolled', batch:'—'};
+    DB.students.push(student); saveDB();
+  }
+  setCurrentUser(student); closeModal(); setTab('dashboard');
+}
+function logoutUser(){ localStorage.removeItem(CUR_KEY); renderNav(); closeModal(); setTab('home'); }
+
+/* =========================================================================
+   ENROLLMENT / PAYMENT (dynamic per batch, mobile UPI intent + desktop QR)
+========================================================================= */
+function isMobileDevice(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); }
+function openEnrollModal(context, batchId){
+  const user = getCurrentUser();
+  const batch = batchId ? DB.batches.find(b=>b.id===batchId) : DB.batches[0];
+  const amount = batch ? batch.price : 300;
+  const batchName = batch ? batch.name : "TCE Batch";
+  const upiId = "7384644030@ybl";
+  const upiUri = `upi://pay?pa=${upiId}&pn=TCE%20Coaching&am=${amount}&cu=INR&tn=${encodeURIComponent(batchName)}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUri)}`;
+  const mobile = isMobileDevice();
+  openModal(`
+    <div class="card glow-border rounded-2xl p-6">
+      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">${context==='locked' ? 'Enroll in Batch to Unlock This Mock Test' : 'Enroll Now — '+priceLabel(amount)}</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <p class="text-sm muted mb-4">${context==='locked' ? 'This Mock Test is part of our paid Mock Test series and is strictly restricted to enrolled/paid batch students. Enroll in a batch below to instantly unlock it — PYQs, Daily Quizzes and Study Materials remain 100% free regardless.' : `Unlock full access to ${batchName} for ${priceLabel(amount)}.`}</p>
+      ${mobile ? `
+      <button onclick="window.location.href='${upiUri}'" class="w-full mb-4 flex items-center justify-center gap-2 btn-gold rounded-lg py-3 text-sm font-bold">
+        <i data-lucide="smartphone" class="w-4 h-4"></i> Pay ${priceLabel(amount)} via GPay / PhonePe / Paytm
+      </button>` : `
+      <div class="flex flex-col items-center card2 rounded-xl p-4 mb-4">
+        <img src="${qrSrc}" alt="UPI QR Code" class="w-40 h-40 rounded-lg bg-white p-1">
+        <p class="text-xs muted mt-2">Scan with GPay / PhonePe / Paytm — Amount ${priceLabel(amount)}</p>
+      </div>`}
+      <div class="flex items-center justify-between card2 rounded-lg px-3 py-2.5 mb-4">
+        <div><p class="text-[10px] muted uppercase">UPI ID</p><p class="font-semibold text-sm">${upiId}</p></div>
+        <button onclick="navigator.clipboard.writeText('${upiId}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1200)" class="px-3 py-1.5 rounded-md btn-gold text-xs font-bold">Copy</button>
+      </div>
+      <input id="utrInput" type="text" placeholder="Enter UTR / Transaction Reference ID" class="w-full rounded-lg px-3 py-2.5 text-sm mb-3">
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="submitPaymentRef('${batch?batch.id:''}')" class="btn-gold rounded-lg py-2.5 text-sm font-bold">Submit for Approval</button>
+        <a id="waPayBtn" href="#" target="_blank" class="flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold bg-[#25D366] text-white"><i data-lucide="message-circle" class="w-4 h-4"></i>Send Screenshot</a>
+      </div>
+      ${!user?'<p class="text-xs text-amber-400 mt-3">⚠ Please login first so we can link your payment to your account.</p>':''}
+    </div>`);
+  document.getElementById('waPayBtn').href = `https://wa.me/917384644030?text=${encodeURIComponent('Hello Sir, I have paid '+priceLabel(amount)+' for '+batchName+' enrollment. Name: '+(user?user.name:'')+'. Sharing payment screenshot below.')}`;
+}
+function submitPaymentRef(batchId){
+  const user = getCurrentUser();
+  const utr = document.getElementById('utrInput').value.trim();
+  if(!user){ alert('Please login first.'); openLoginModal(); return; }
+  if(!utr){ alert('Please enter your UTR / Reference ID.'); return; }
+  const idx = DB.students.findIndex(s=>s.id===user.id);
+  if(idx>-1){ DB.students[idx].paymentStatus='Pending'; DB.students[idx].utr=utr; if(batchId){ const b=DB.batches.find(x=>x.id===batchId); if(b) DB.students[idx].batch=b.name; } saveDB(); }
+  alert('Payment reference submitted! Your access will be granted after admin verification (usually within a few hours).');
+  closeModal();
+}
+function isEnrolled(){ const user = getCurrentUser(); if(!user) return false; const rec = DB.students.find(s=>s.id===user.id); return rec && rec.paymentStatus==='Approved'; }
+
+/* =========================================================================
+   TAB RENDERING ROOT
+========================================================================= */
+function renderTab(){
+  const root = document.getElementById('tabContent');
+  root.classList.add('fade-in');
+  if(activeTab==='home') root.innerHTML = tplHome();
+  else if(activeTab==='mocks') root.innerHTML = tplMocks();
+  else if(activeTab==='quiz') root.innerHTML = tplQuiz();
+  else if(activeTab==='pyq') root.innerHTML = tplPyq();
+  else if(activeTab==='materials') root.innerHTML = tplMaterials();
+  else if(activeTab==='batches') root.innerHTML = tplBatches();
+  else if(activeTab==='dashboard') root.innerHTML = tplDashboard();
+  else if(activeTab==='notices') root.innerHTML = tplNotices();
+  lucide.createIcons();
+  if(activeTab==='mocks') initMocksTab();
+  if(activeTab==='quiz') initQuizTab();
+  if(activeTab==='pyq') initPyqTab();
+  if(activeTab==='materials') initMaterialsTab();
+}
+
+/* ---------- HOME ---------- */
+function tplHome(){
+  return `
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+    ${[
+      {icon:'file-check-2', label:'Mock Tests', val:'Paid / Enrolled', tab:'mocks'},
+      {icon:'zap', label:'Quick Quiz', val:'Free — GK Only', tab:'quiz'},
+      {icon:'archive', label:'PYQ Hub', val:'100% Free', tab:'pyq'},
+      {icon:'book-open', label:'Study Material', val:'100% Free', tab:'materials'}
+    ].map(c=>`
+      <button onclick="setTab('${c.tab}')" class="card glow-border rounded-2xl p-4 text-left">
+        <div class="w-9 h-9 rounded-lg gold-grad flex items-center justify-center mb-3"><i data-lucide="${c.icon}" class="w-4 h-4 text-ink"></i></div>
+        <p class="text-xs muted">${c.label}</p><p class="font-display font-700 text-sm mt-0.5">${c.val}</p>
+      </button>`).join('')}
+  </div>
+
+  <div class="mb-10">
+    <h3 class="font-display font-700 text-lg mb-3">Our Batches</h3>
+    <div class="grid sm:grid-cols-2 gap-4">
+      ${DB.batches.filter(b=>b.active).map(b=>`
+        <div class="card glow-border rounded-2xl p-5 flex flex-col">
+          <div class="flex items-start justify-between gap-2 mb-1">
+            <h4 class="font-display font-700 text-sm">${b.name}</h4>
+            ${b.examCategory && b.examCategory!=='All Exams' ? `<span class="badge bg-sky-500/15 text-sky-400 shrink-0">${b.examCategory}</span>` : ''}
+          </div>
+          <p class="gold-text font-display font-800 text-xl mb-3">${priceLabel(b.price)}</p>
+          <ul class="text-xs muted space-y-1 mb-4">${b.features.slice(0,3).map(f=>`<li class="flex gap-1.5 items-center"><i data-lucide="check" class="w-3 h-3 gold-text"></i>${f}</li>`).join('')}</ul>
+          <button onclick="openEnrollModal('batch','${b.id}')" class="mt-auto btn-gold rounded-lg py-2 text-xs font-bold">Enroll Now</button>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="font-display font-700 text-lg mb-3">Latest Notices</h3>
+    <div class="grid sm:grid-cols-3 gap-4">
+      ${DB.notices.slice(0,3).map(n=>`<div class="card glow-border rounded-xl p-4"><p class="text-[10px] muted">${n.date}</p><p class="font-semibold text-sm mt-1">${n.title}</p></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* ---------- MOCK TESTS TAB (search + subject tabs) ---------- */
+let mockSubjectTab = 'math'; let mockSearchQ=''; let mockExamFilter='all';
+function tplMocks(){
+  const subjects = [['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['full','Full Mock']];
+  return `
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div>
+      <h2 class="font-display font-800 text-2xl mb-1">Mock Tests <span class="gold-text">CBT Engine</span></h2>
+      <p class="muted text-sm">TCS iON / SSC CBT style — free demo mock in every subject, rest unlocked for enrolled batch students only.</p>
+    </div>
+    <span class="badge bg-red-500/15 text-red-400 w-fit">🔒 Paid / Enrolled Students Only (except Free Demo)</span>
+  </div>
+  <div class="flex flex-col sm:flex-row gap-3 mb-6">
+    <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 flex-1">
+      ${subjects.map(s=>`<button onclick="mockSubjectTab='${s[0]}';initMocksTab()" id="mst_${s[0]}" class="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap ${mockSubjectTab===s[0]?'tab-active':'card2 muted'}">${s[1]}</button>`).join('')}
+    </div>
+    <select id="mockExamFilterSel" onchange="mockExamFilter=this.value;initMocksTab()" class="rounded-lg px-3 py-2 text-xs">
+      <option value="all">All Exam Categories</option>
+      ${DB.examCategories.map(c=>`<option value="${c}">${c}</option>`).join('')}
+    </select>
+    <div class="relative w-full sm:w-64">
+      <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 muted"></i>
+      <input type="text" placeholder="Search test title..." oninput="mockSearchQ=this.value;initMocksTab()" class="w-full rounded-lg pl-9 pr-3 py-2 text-xs">
+    </div>
+  </div>
+  <div id="mocksList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
+}
+function initMocksTab(){
+  document.querySelectorAll('[id^="mst_"]').forEach(b=>b.classList.remove('tab-active'));
+  const active = document.getElementById('mst_'+mockSubjectTab); if(active) active.classList.add('tab-active');
+  const list = document.getElementById('mocksList');
+  let tests = DB.mockTests[mockSubjectTab]||[];
+  if(mockSearchQ.trim()) tests = tests.filter(t=>t.title.toLowerCase().includes(mockSearchQ.trim().toLowerCase()));
+  if(mockExamFilter!=='all') tests = tests.filter(t=>(t.examCategory||'All Exams')===mockExamFilter || (t.examCategory||'All Exams')==='All Exams');
+  const enrolled = isEnrolled() || isAdmin();
+  const user = getCurrentUser();
+  list.innerHTML = tests.length ? tests.map((t)=>{
+    const locked = !t.isDemo && !enrolled;
+    const attempts = DB.submissions.filter(s=>s.testId===t.id && user && s.studentId===user.id).length;
+    return `
+    <div class="card glow-border rounded-2xl p-5 flex flex-col">
+      <div class="flex justify-between items-start mb-2 gap-2 flex-wrap">
+        <span class="badge ${t.isDemo?'bg-emerald-500/20 text-emerald-400':'bg-amber-500/15 gold-text'}">${t.isDemo?'FREE DEMO':'PREMIUM'}</span>
+        ${t.examCategory && t.examCategory!=='All Exams' ? `<span class="badge bg-sky-500/15 text-sky-400">${t.examCategory}</span>` : ''}
+        ${locked?'<span class="badge bg-red-500/15 text-red-400">🔒 Locked</span>':''}
+      </div>
+      <h3 class="font-display font-700 text-sm mb-1">${t.title}</h3>
+      <p class="text-xs muted mb-3">${t.questions.length} Questions • ${t.durationMin} min • +${t.marksCorrect}/-${t.marksWrong}</p>
+      ${attempts>0?`<p class="text-[11px] muted mb-2">Attempts so far: <span class="gold-text font-semibold">${attempts}</span></p>`:''}
+      <button onclick="${locked?`openEnrollModal('locked')`:`showPreExamInstructions('${t.id}','mock','${mockSubjectTab}')`}" class="mt-auto ${locked?'btn-ghost':'btn-gold'} rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1.5">
+        <i data-lucide="${locked?'lock':(attempts>0?'repeat':'play')}" class="w-3.5 h-3.5"></i>
+        ${locked?'Enroll in Batch to Unlock':(attempts>0?'Re-Attempt Test':'Start Test')}
+      </button>
+    </div>`;
+  }).join('') : `<p class="muted text-sm col-span-full">No tests match your search.</p>`;
+}
+
+/* ---------- PYQ HUB TAB ---------- */
+let pyqCategoryTab='all', pyqYear='all', pyqSearchQ='';
+function tplPyq(){
+  const years=['2021','2022','2023','2024','2025','2026'];
+  return `
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div>
+      <h2 class="font-display font-800 text-2xl mb-1">Previous Year <span class="gold-text">Questions Hub</span></h2>
+      <p class="muted text-sm">Practice real exam papers — filter by exam, year, or search by keyword. Just enter your name &amp; phone to start.</p>
+    </div>
+    <span class="badge bg-emerald-500/20 text-emerald-400 w-fit">✅ 100% FREE — No Batch Enrollment Required</span>
+  </div>
+  <div class="relative mb-4">
+    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 muted"></i>
+    <input type="text" placeholder='Search e.g. "WBP 2024" or "SSC GD Shift 1"' oninput="pyqSearchQ=this.value;initPyqTab()" class="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm">
+  </div>
+  <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-3">
+    <button onclick="pyqCategoryTab='all';initPyqTab()" id="pcat_all" class="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap ${pyqCategoryTab==='all'?'tab-active':'card2 muted'}">All Exams</button>
+    ${DB.examCategories.map(c=>`<button onclick="pyqCategoryTab='${c}';initPyqTab()" id="pcat_${c.replace(/\\s+/g,'_')}" class="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap ${pyqCategoryTab===c?'tab-active':'card2 muted'}">${c}</button>`).join('')}
+  </div>
+  <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-6">
+    <button onclick="pyqYear='all';initPyqTab()" id="pyr_all" class="px-3 py-1.5 rounded-lg text-xs font-bold ${pyqYear==='all'?'tab-active':'card2 muted'}">All Years</button>
+    ${years.map(y=>`<button onclick="pyqYear='${y}';initPyqTab()" id="pyr_${y}" class="px-3 py-1.5 rounded-lg text-xs font-bold ${pyqYear===y?'tab-active':'card2 muted'}">${y}</button>`).join('')}
+  </div>
+  <div id="pyqList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
+}
+function initPyqTab(){
+  document.querySelectorAll('[id^="pcat_"],[id^="pyr_"]').forEach(b=>b.classList.remove('tab-active'));
+  const ac = document.getElementById('pcat_'+(pyqCategoryTab==='all'?'all':pyqCategoryTab.replace(/\s+/g,'_'))); if(ac) ac.classList.add('tab-active');
+  const ay = document.getElementById('pyr_'+pyqYear); if(ay) ay.classList.add('tab-active');
+  let list = DB.pyqSets.slice();
+  if(pyqCategoryTab!=='all') list = list.filter(p=>p.examCategory===pyqCategoryTab);
+  if(pyqYear!=='all') list = list.filter(p=>p.year===pyqYear);
+  if(pyqSearchQ.trim()){ const q=pyqSearchQ.trim().toLowerCase(); list = list.filter(p=>(p.title+' '+p.examCategory+' '+p.year).toLowerCase().includes(q)); }
+  const user = getCurrentUser();
+  document.getElementById('pyqList').innerHTML = list.length? list.map(p=>{
+    const attempts = DB.submissions.filter(s=>s.testId===p.id && user && s.studentId===user.id).length;
+    return `
+    <div class="card glow-border rounded-2xl p-5 flex flex-col">
+      <span class="badge bg-amber-500/15 gold-text inline-block mb-2 w-fit">${p.examCategory} • ${p.year}</span>
+      <h3 class="font-display font-700 text-sm mb-1">${p.title}</h3>
+      <p class="text-xs muted mb-3">${p.questions.length} Questions • ${p.durationMin} min • +${p.marksCorrect}/-${p.marksWrong}</p>
+      ${attempts>0?`<p class="text-[11px] muted mb-2">Attempts so far: <span class="gold-text font-semibold">${attempts}</span></p>`:''}
+      <button onclick="showPreExamInstructions('${p.id}','pyq')" class="mt-auto btn-gold rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1.5">
+        <i data-lucide="${attempts>0?'repeat':'play'}" class="w-3.5 h-3.5"></i>${attempts>0?'Re-Attempt':'Start Test'}
+      </button>
+    </div>`;
+  }).join('') : `<p class="muted text-sm col-span-full">No PYQ sets match your filters.</p>`;
+}
+
+/* =========================================================================
+   CBT EXAM ENGINE (shared by Mock Tests, PYQ, Quiz)
+========================================================================= */
+let examState = null;
+function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function resumeKey(){ const u=getCurrentUser(); return u? 'tce_exam_resume_'+u.id : null; }
+
+function findTestById(testId, source, subject){
+  if(source==='mock') return (DB.mockTests[subject]||[]).find(t=>t.id===testId);
+  if(source==='pyq') return DB.pyqSets.find(t=>t.id===testId);
+  return null;
+}
+
+function showPreExamInstructions(testId, source, subject){
+  const user = getCurrentUser();
+  if(!user){ alert('Please login to start the test (attempts are tracked in your dashboard).'); openLoginModal(); return; }
+  const test = findTestById(testId, source, subject);
+  if(!test) return;
+  // Check for a resumable in-progress attempt
+  const rk = resumeKey();
+  let resumeData = null;
+  if(rk){ try{ resumeData = JSON.parse(localStorage.getItem(rk)||'null'); }catch(e){ resumeData=null; } }
+  const hasResume = resumeData && resumeData.testId===testId && resumeData.remaining>0;
+  openModal(`
+    <div class="card glow-border rounded-2xl p-6">
+      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Exam Instructions</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="card2 rounded-xl p-4 mb-4 text-sm space-y-2">
+        <p><b>Test:</b> ${test.title}</p>
+        <p><b>Total Questions:</b> ${test.questions.length}</p>
+        <p><b>Duration:</b> ${test.durationMin} minutes</p>
+        <p><b>Marking Scheme:</b> <span class="text-emerald-400">+${test.marksCorrect}</span> for correct, <span class="text-red-400">-${test.marksWrong}</span> for wrong</p>
+      </div>
+      <ul class="text-xs muted space-y-1.5 mb-5 list-disc pl-4">
+        <li>The exam will open in full-screen mode for an authentic CBT experience.</li>
+        <li>Switching tabs or exiting full-screen will trigger a warning; 3 violations auto-submit your test.</li>
+        <li>Use "Save & Next", "Mark for Review & Next" and "Clear Response" to navigate.</li>
+        <li>Your answers auto-save — you can resume if your browser refreshes or disconnects.</li>
+      </ul>
+      ${hasResume? `<button onclick="resumeExam()" class="w-full btn-gold rounded-lg py-3 text-sm font-bold mb-2 flex items-center justify-center gap-2"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>Resume Previous Attempt</button>
+      <button onclick="beginExam('${testId}','${source}','${subject||''}')" class="w-full btn-ghost rounded-lg py-2.5 text-xs font-bold">Start Fresh Instead (discards saved progress)</button>`
+      : `<button onclick="beginExam('${testId}','${source}','${subject||''}')" class="w-full btn-gold rounded-lg py-3 text-sm font-bold flex items-center justify-center gap-2"><i data-lucide="play" class="w-4 h-4"></i>Begin Exam</button>`}
+    </div>`);
+}
+function beginExam(testId, source, subject){
+  const test = findTestById(testId, source, subject);
+  if(!test) return;
+  const shuffledQ = shuffle(test.questions).map(q=>({...q, options: shuffle(q.options)}));
+  examState = {
+    testId: test.id, source, subject: subject||test.subject||'pyq', title: test.title, durationSec: test.durationMin*60, remaining: test.durationMin*60,
+    marksCorrect: test.marksCorrect, marksWrong: test.marksWrong, questions: shuffledQ,
+    answers: new Array(shuffledQ.length).fill(null), status: new Array(shuffledQ.length).fill('not-visited'),
+    current: 0, violations: 0, lang: 'en', timer:null, startedAt: Date.now()
+  };
+  examState.status[0]='not-answered';
+  closeModal();
+  renderExamScreen();
+  startExamTimer();
+  attachAntiCheat();
+  requestFullscreenSafe();
+  saveExamProgress();
+}
+function resumeExam(){
+  const rk = resumeKey(); if(!rk) return;
+  let data; try{ data = JSON.parse(localStorage.getItem(rk)); }catch(e){ return; }
+  if(!data) return;
+  examState = data;
+  closeModal();
+  renderExamScreen();
+  startExamTimer();
+  attachAntiCheat();
+  requestFullscreenSafe();
+}
+function requestFullscreenSafe(){ try{ document.documentElement.requestFullscreen().catch(()=>{}); }catch(e){} }
+function saveExamProgress(){
+  if(!examState) return;
+  const rk = resumeKey(); if(!rk) return;
+  const {timer, ...toSave} = examState;
+  localStorage.setItem(rk, JSON.stringify(toSave));
+}
+function clearExamProgress(){ const rk = resumeKey(); if(rk) localStorage.removeItem(rk); }
+
+function startMockTest(testId, subject){ showPreExamInstructions(testId,'mock',subject); }
+
+function renderExamScreen(){
+  const st = examState;
+  const hasBn = st.questions.some(qq=>qq.textBn && qq.textBn.trim().length>0);
+  document.getElementById('modalRoot').innerHTML = `
+  <div class="fixed inset-0 z-50 bg-[var(--bg)] flex flex-col" id="examRoot">
+    <div class="flex items-center justify-between px-4 py-3 card2" style="border-bottom:1px solid var(--border)">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg gold-grad flex items-center justify-center font-display font-800 text-ink text-sm">T</div>
+        <div><p class="text-xs font-semibold">${st.title}</p><p class="text-[10px] muted">Candidate: ${getCurrentUser().name}</p></div>
+      </div>
+      <div class="flex items-center gap-3">
+        ${hasBn?`<button onclick="toggleExamLang()" class="btn-ghost rounded-md px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1"><i data-lucide="languages" class="w-3.5 h-3.5"></i>${st.lang==='en'?'EN':'BN'}</button>`:''}
+        <div id="examTimer" class="px-3 py-1.5 rounded-md bg-red-500/15 text-red-400 font-mono font-bold text-sm"></div>
+        <button onclick="toggleFullscreen()" class="btn-ghost rounded-md px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1"><i data-lucide="maximize" class="w-3.5 h-3.5"></i></button>
+      </div>
+    </div>
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div class="flex-1 overflow-y-auto p-5 sm:p-8 watermark-wrap wm-fallback relative">
+        <div class="relative z-10 max-w-2xl mx-auto">
+          <div class="flex justify-between items-center mb-4">
+            <span class="text-xs muted">Question <span class="gold-text font-bold">${st.current+1}</span> of ${st.questions.length}</span>
+            <span class="text-xs muted">Marks: <span class="text-emerald-400 font-semibold">+${st.marksCorrect}</span> / <span class="text-red-400 font-semibold">-${st.marksWrong}</span></span>
+          </div>
+          <p id="examQText" class="text-base sm:text-lg font-medium mb-6 leading-relaxed"></p>
+          <div id="examOptions" class="space-y-3"></div>
+        </div>
+      </div>
+      <div class="w-full lg:w-72 shrink-0 card2 p-4 overflow-y-auto" style="border-left:1px solid var(--border)">
+        <p class="text-xs font-bold muted uppercase mb-3">Question Palette</p>
+        <div class="grid grid-cols-5 gap-2 mb-4" id="examPalette"></div>
+        <div class="space-y-1.5 text-[11px]">
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span>Answered</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span>Not Answered</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-gray-500 inline-block"></span>Not Visited</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500 inline-block"></span>Marked for Review</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500 inline-block relative">•</span>Answered &amp; Marked</div>
+        </div>
+        <button onclick="confirmSubmitExam()" class="w-full mt-5 rounded-lg py-2.5 text-xs font-bold bg-red-600 text-white">Submit Test</button>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2 justify-between px-4 py-3 card2" style="border-top:1px solid var(--border)">
+      <button onclick="examNav(-1)" class="btn-ghost rounded-lg px-4 py-2 text-xs font-bold">Previous</button>
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="clearResponse()" class="btn-ghost rounded-lg px-4 py-2 text-xs font-bold">Clear Response</button>
+        <button onclick="markForReview()" class="rounded-lg px-4 py-2 text-xs font-bold bg-purple-600 text-white">Mark for Review &amp; Next</button>
+        <button onclick="saveAndNext()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">Save &amp; Next</button>
+      </div>
+    </div>
+  </div>
+  <div id="examWarnRoot"></div>`;
+  renderExamQuestion(); renderPalette();
+}
+function renderExamQuestion(){
+  const st = examState; const q = st.questions[st.current];
+  document.getElementById('examQText').innerHTML = (st.lang==='bn' && q.textBn) ? q.textBn : q.textEn;
+  document.getElementById('examQText').className = `text-base sm:text-lg font-medium mb-6 leading-relaxed ${(st.lang==='bn'&&q.textBn)?'bn':''}`;
+  document.getElementById('examOptions').innerHTML = q.options.map(o=>{
+    const checked = st.answers[st.current]===o.key;
+    const label = (st.lang==='bn' && o.textBn) ? o.textBn : o.textEn;
+    return `<label class="flex items-center gap-3 card rounded-xl px-4 py-3 cursor-pointer ${checked?'ring-2 ring-amber-500':''}">
+      <input type="radio" name="examOpt" ${checked?'checked':''} onchange="selectOption('${o.key}')" class="w-4 h-4 accent-amber-500">
+      <span class="text-sm font-semibold gold-text">${o.key}.</span>
+      <span class="text-sm ${(st.lang==='bn'&&o.textBn)?'bn':''}">${label}</span>
+    </label>`;
+  }).join('');
+}
+function selectOption(key){
+  const st = examState; st.answers[st.current] = key;
+  st.status[st.current] = st.status[st.current].includes('marked') ? 'answered-marked' : 'answered';
+  renderPalette(); saveExamProgress();
+}
+function clearResponse(){
+  const st = examState; st.answers[st.current] = null;
+  st.status[st.current] = st.status[st.current].includes('marked') ? 'marked' : 'not-answered';
+  renderExamQuestion(); renderPalette(); saveExamProgress();
+}
+function markForReview(){
+  const st = examState; st.status[st.current] = st.answers[st.current] ? 'answered-marked' : 'marked';
+  goToQuestion(Math.min(st.current+1, st.questions.length-1)); saveExamProgress();
+}
+function saveAndNext(){
+  const st = examState; if(st.status[st.current]==='not-visited') st.status[st.current] = st.answers[st.current]?'answered':'not-answered';
+  goToQuestion(Math.min(st.current+1, st.questions.length-1)); saveExamProgress();
+}
+function examNav(delta){ goToQuestion(Math.max(0, Math.min(examState.current+delta, examState.questions.length-1))); }
+function goToQuestion(idx){ const st = examState; if(st.status[idx]==='not-visited') st.status[idx]='not-answered'; st.current = idx; renderExamQuestion(); renderPalette(); }
+function renderPalette(){
+  const st = examState;
+  const colors = {'not-visited':'bg-gray-500 text-white','not-answered':'bg-red-500 text-white','answered':'bg-emerald-500 text-ink','marked':'bg-purple-500 text-white','answered-marked':'bg-purple-500 text-white'};
+  document.getElementById('examPalette').innerHTML = st.questions.map((q,i)=>`
+    <button onclick="goToQuestion(${i})" class="palette-btn ${colors[st.status[i]]} ${st.current===i?'ring-2 ring-white':''}">
+      ${i+1}${st.status[i]==='answered-marked'?'<span class="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full"></span>':''}
+    </button>`).join('');
+}
+function toggleExamLang(){ examState.lang = examState.lang==='en'?'bn':'en'; renderExamQuestion(); }
+function toggleFullscreen(){ if(!document.fullscreenElement){ document.documentElement.requestFullscreen().catch(()=>{}); } else{ document.exitFullscreen().catch(()=>{}); } }
+function startExamTimer(){
+  updateTimerDisplay();
+  examState.timer = setInterval(()=>{
+    examState.remaining--; updateTimerDisplay(); saveExamProgress();
+    if(examState.remaining<=0){ clearInterval(examState.timer); finishExam(true); }
+  },1000);
+}
+function updateTimerDisplay(){
+  const s = examState.remaining;
+  const h = String(Math.floor(s/3600)).padStart(2,'0'), m = String(Math.floor((s%3600)/60)).padStart(2,'0'), sec = String(s%60).padStart(2,'0');
+  const el = document.getElementById('examTimer'); if(el) el.textContent = `${h}:${m}:${sec}`;
+}
+function attachAntiCheat(){
+  window.__examBlurHandler = ()=>{
+    if(!examState) return;
+    examState.violations++;
+    if(examState.violations>=3){ finishExam(false, true); return; }
+    document.getElementById('examWarnRoot').innerHTML = `
+      <div class="fixed inset-0 z-[60] modal-backdrop flex items-center justify-center p-4">
+        <div class="card glow-border rounded-2xl p-6 max-w-sm text-center">
+          <i data-lucide="alert-triangle" class="w-10 h-10 text-red-500 mx-auto mb-3"></i>
+          <h3 class="font-display font-700 text-lg mb-2">Warning ${examState.violations}/3</h3>
+          <p class="text-sm muted mb-4">Switching tabs / leaving fullscreen during the exam is not allowed. Your test will be <b>auto-submitted</b> on the 3rd violation.</p>
+          <button onclick="document.getElementById('examWarnRoot').innerHTML=''" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">I Understand</button>
+        </div>
+      </div>`;
+    lucide.createIcons();
+  };
+  window.addEventListener('blur', window.__examBlurHandler);
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden && examState) window.__examBlurHandler(); });
+}
+function detachAntiCheat(){ if(window.__examBlurHandler) window.removeEventListener('blur', window.__examBlurHandler); }
+
+function confirmSubmitExam(){
+  const st = examState;
+  const answered = st.status.filter(s=>s==='answered'||s==='answered-marked').length;
+  const notAnswered = st.status.filter(s=>s==='not-answered').length;
+  const marked = st.status.filter(s=>s==='marked'||s==='answered-marked').length;
+  const notVisited = st.status.filter(s=>s==='not-visited').length;
+  document.getElementById('examWarnRoot').innerHTML = `
+    <div class="fixed inset-0 z-[60] modal-backdrop flex items-center justify-center p-4">
+      <div class="card glow-border rounded-2xl p-6 max-w-sm">
+        <h3 class="font-display font-700 text-lg mb-4 text-center">Submit Test?</h3>
+        <div class="grid grid-cols-2 gap-3 mb-5 text-center text-xs">
+          <div class="card2 rounded-lg p-3"><p class="text-emerald-400 font-bold text-lg">${answered}</p><p class="muted">Answered</p></div>
+          <div class="card2 rounded-lg p-3"><p class="text-red-400 font-bold text-lg">${notAnswered}</p><p class="muted">Not Answered</p></div>
+          <div class="card2 rounded-lg p-3"><p class="text-purple-400 font-bold text-lg">${marked}</p><p class="muted">Marked for Review</p></div>
+          <div class="card2 rounded-lg p-3"><p class="text-gray-400 font-bold text-lg">${notVisited}</p><p class="muted">Not Visited</p></div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="document.getElementById('examWarnRoot').innerHTML=''" class="flex-1 btn-ghost rounded-lg py-2.5 text-xs font-bold">Continue Exam</button>
+          <button onclick="finishExam(false)" class="flex-1 rounded-lg py-2.5 text-xs font-bold bg-red-600 text-white">Yes, Submit</button>
+        </div>
+      </div>
+    </div>`;
+  lucide.createIcons();
+}
+function finishExam(autoTimeout, autoViolation){
+  if(!examState) return;
+  clearInterval(examState.timer); detachAntiCheat();
+  const st = examState;
+  let correct=0, wrong=0, unanswered=0;
+  st.questions.forEach((q,i)=>{
+    if(st.answers[i]===null || st.answers[i]===undefined) unanswered++;
+    else if(st.answers[i]===q.correct) correct++; else wrong++;
+  });
+  const score = +(correct*st.marksCorrect - wrong*st.marksWrong).toFixed(2);
+  const maxScore = +(st.questions.length*st.marksCorrect).toFixed(2);
+  const accuracy = (correct+wrong)>0 ? +((correct/(correct+wrong))*100).toFixed(1) : 0;
+  const user = getCurrentUser();
+  const attemptNo = DB.submissions.filter(s=>s.testId===st.testId && s.studentId===user.id).length + 1;
+  const timeTakenSec = st.durationSec-st.remaining;
+  const submission = {
+    id: uid('sub'), testId: st.testId, testType: st.source||'mock', subject: st.subject, testTitle: st.title, studentId: user.id, studentName: user.name, studentPhone: user.phone||'',
+    attempt: attemptNo, score, maxScore, correct, wrong, unanswered, accuracy, timeTakenSec, date: new Date().toISOString(),
+    detail: st.questions.map((q,i)=>({q, given: st.answers[i]}))
+  };
+  DB.submissions.push(submission); saveDB(); clearExamProgress();
+  if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  renderResultScreen(submission, autoTimeout, autoViolation);
+  examState = null;
+}
+
+function renderResultScreen(sub, autoTimeout, autoViolation){
+  const leaderboard = DB.submissions.filter(s=>s.testId===sub.testId)
+    .reduce((acc,s)=>{ const ex=acc.find(a=>a.studentId===s.studentId); if(!ex||s.score>ex.score){ acc=acc.filter(a=>a.studentId!==s.studentId); acc.push(s); } return acc; },[])
+    .sort((a,b)=>b.score-a.score);
+  const rank = leaderboard.findIndex(s=>s.id===sub.id)+1;
+  document.getElementById('modalRoot').innerHTML = `
+  <div class="fixed inset-0 z-50 bg-[var(--bg)] overflow-y-auto">
+    <div class="max-w-3xl mx-auto px-4 py-10">
+      ${autoTimeout?'<div class="mb-4 text-center text-xs bg-amber-500/15 gold-text rounded-lg py-2">⏱ Time up — test auto-submitted.</div>':''}
+      ${autoViolation?'<div class="mb-4 text-center text-xs bg-red-500/15 text-red-400 rounded-lg py-2">⚠ Auto-submitted after 3 tab-switch violations.</div>':''}
+      <div class="text-center mb-8" id="scorecardArea">
+        <i data-lucide="trophy" class="w-12 h-12 gold-text mx-auto mb-2"></i>
+        <h2 class="font-display font-800 text-2xl">${sub.testTitle}</h2>
+        <p class="muted text-sm">Attempt #${sub.attempt} — TCE The Competitive Edge</p>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        ${[['Score', sub.score+' / '+sub.maxScore],['Accuracy', sub.accuracy+'%'],['Correct', sub.correct],['Wrong', sub.wrong]]
+          .map(c=>`<div class="card glow-border rounded-xl p-4 text-center"><p class="text-[10px] muted uppercase">${c[0]}</p><p class="font-display font-800 text-xl gold-text mt-1">${c[1]}</p></div>`).join('')}
+      </div>
+      <div class="card glow-border rounded-2xl p-5 mb-6">
+        <h3 class="font-display font-700 text-sm mb-4">🏆 Live Leaderboard — Your Rank: <span class="gold-text">#${rank}</span></h3>
+        <div class="overflow-x-auto"><table class="w-full text-xs">
+          <thead><tr class="muted text-left"><th class="py-1.5">Rank</th><th>Student</th><th>Score</th><th>Accuracy</th></tr></thead>
+          <tbody>${leaderboard.slice(0,10).map((s,i)=>`<tr class="${s.id===sub.id?'gold-text font-bold':''}" style="border-top:1px solid var(--border)"><td class="py-1.5">${i+1}</td><td>${s.studentName}</td><td>${s.score}</td><td>${s.accuracy}%</td></tr>`).join('')}</tbody>
+        </table></div>
+      </div>
+      <div class="flex flex-wrap gap-3 justify-center mb-4">
+        <button onclick="downloadScorecard('${sub.id}', ${rank})" class="btn-ghost rounded-lg px-5 py-2.5 text-xs font-bold flex items-center gap-1.5"><i data-lucide="image-down" class="w-3.5 h-3.5"></i>Download Scorecard</button>
+        <button onclick="shareScorecardWhatsApp('${sub.id}', ${rank})" class="rounded-lg px-5 py-2.5 text-xs font-bold bg-[#25D366] text-white flex items-center gap-1.5"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i>Share on WhatsApp</button>
+      </div>
+      <div class="flex flex-wrap gap-3 justify-center">
+        <button onclick="reviewSolutions('${sub.id}')" class="btn-ghost rounded-lg px-5 py-2.5 text-xs font-bold">Review Full Solutions</button>
+        <button onclick="reAttemptFromResult('${sub.id}')" class="btn-gold rounded-lg px-5 py-2.5 text-xs font-bold flex items-center gap-1.5"><i data-lucide="repeat" class="w-3.5 h-3.5"></i>Re-Attempt Test</button>
+        <button onclick="closeModal();setTab('dashboard')" class="btn-ghost rounded-lg px-5 py-2.5 text-xs font-bold">Go to Dashboard</button>
+      </div>
+    </div>
+  </div>`;
+  lucide.createIcons();
+}
+function reAttemptFromResult(subId){
+  const sub = DB.submissions.find(s=>s.id===subId);
+  if(!sub) return;
+  showPreExamInstructions(sub.testId, sub.testType==='pyq'?'pyq':'mock', sub.subject);
+}
+let reviewFilterMode = 'all';
+function reviewSolutions(subId){
+  const sub = DB.submissions.find(s=>s.id===subId);
+  openModalWide(renderReviewHtml(sub));
+}
+function renderReviewHtml(sub){
+  let items = sub.detail;
+  if(reviewFilterMode==='incorrect') items = items.filter(d=> d.given && d.given!==d.q.correct);
+  else if(reviewFilterMode==='unattempted') items = items.filter(d=> !d.given);
+  return `
+  <div class="card p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-display font-700 text-lg">Review — ${sub.testTitle} (Attempt #${sub.attempt})</h3>
+      <button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="flex gap-2 mb-4">
+      ${[['all','All Questions'],['incorrect','Incorrect Only'],['unattempted','Unattempted Only']].map(f=>`
+        <button onclick="reviewFilterMode='${f[0]}';document.getElementById('modalRoot').innerHTML='';openModalWide(renderReviewHtml(DB.submissions.find(s=>s.id==='${sub.id}')))" class="px-3 py-1.5 rounded-lg text-xs font-bold ${reviewFilterMode===f[0]?'tab-active':'card2 muted'}">${f[1]}</button>`).join('')}
+    </div>
+    <div class="space-y-4">
+    ${items.length? items.map((d,i)=>{
+      const correct = d.given===d.q.correct;
+      return `
+      <div class="card2 rounded-xl p-4">
+        <p class="text-sm font-medium mb-2">${i+1}. ${d.q.textEn} ${d.q.textBn?`<span class="bn block text-xs muted mt-1">${d.q.textBn}</span>`:''}</p>
+        <div class="grid sm:grid-cols-2 gap-2 mb-2">
+          ${d.q.options.map(o=>`<div class="text-xs px-3 py-1.5 rounded-md ${o.key===d.q.correct?'bg-emerald-500/20 text-emerald-400':(o.key===d.given?'bg-red-500/20 text-red-400':'card')}">${o.key}. ${o.textEn}</div>`).join('')}
+        </div>
+        <p class="text-[11px] ${correct?'text-emerald-400':'text-red-400'} font-semibold mb-1">${d.given? (correct?'✔ Correct':'✘ Incorrect') : '— Not Answered'}</p>
+        <p class="text-xs muted">${d.q.explanation||''}</p>
+        ${d.q.solutionImg?`<img src="${d.q.solutionImg}" class="mt-2 rounded-lg max-h-40">`:''}
+      </div>`;
+    }).join('') : '<p class="muted text-sm text-center py-6">No questions match this filter.</p>'}
+    </div>
+  </div>`;
+}
+
+/* Branded Scorecard (canvas-based image) */
+function drawScorecardCanvas(sub, rank){
+  const canvas = document.createElement('canvas');
+  canvas.width = 900; canvas.height = 550;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0,0,900,550);
+  grad.addColorStop(0,'#0B0B0B'); grad.addColorStop(1,'#161f2e');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,900,550);
+  const goldGrad = ctx.createLinearGradient(0,0,900,0);
+  goldGrad.addColorStop(0,'#F59E0B'); goldGrad.addColorStop(0.5,'#D97706'); goldGrad.addColorStop(1,'#FBBF24');
+  ctx.fillStyle = goldGrad; ctx.fillRect(0,0,900,10);
+  ctx.fillStyle = goldGrad; ctx.font = 'bold 34px Arial'; ctx.fillText('TCE - The Competitive Edge', 40, 70);
+  ctx.fillStyle = '#94A3B8'; ctx.font = '16px Arial'; ctx.fillText('Official Score Card', 40, 100);
+  ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 26px Arial'; ctx.fillText(sub.testTitle, 40, 160);
+  ctx.fillStyle = '#94A3B8'; ctx.font = '16px Arial'; ctx.fillText('Candidate: '+sub.studentName+'   |   Attempt #'+sub.attempt, 40, 195);
+  const stats = [['Score', sub.score+' / '+sub.maxScore],['Rank', '#'+rank],['Accuracy', sub.accuracy+'%'],['Correct/Wrong', sub.correct+' / '+sub.wrong]];
+  stats.forEach((s,i)=>{
+    const x = 40 + (i%2)*430, y = 250 + Math.floor(i/2)*110;
+    ctx.strokeStyle='rgba(217,119,6,0.4)'; ctx.lineWidth=1.5; ctx.strokeRect(x,y,400,90);
+    ctx.fillStyle='#94A3B8'; ctx.font='14px Arial'; ctx.fillText(s[0].toUpperCase(), x+20, y+30);
+    ctx.fillStyle=goldGrad; ctx.font='bold 32px Arial'; ctx.fillText(String(s[1]), x+20, y+68);
+  });
+  ctx.fillStyle = '#94A3B8'; ctx.font = '13px Arial';
+  ctx.fillText('Near Nahata Anchal, Nahata, P.S. Gopalnagar, North 24 Parganas, West Bengal - 743290', 40, 520);
+  return canvas;
+}
+function downloadScorecard(subId, rank){
+  const sub = DB.submissions.find(s=>s.id===subId); if(!sub) return;
+  const canvas = drawScorecardCanvas(sub, rank);
+  const a = document.createElement('a'); a.href = canvas.toDataURL('image/png'); a.download = 'TCE_Scorecard_'+sub.studentName.replace(/\s+/g,'_')+'.png'; a.click();
+}
+function shareScorecardWhatsApp(subId, rank){
+  const sub = DB.submissions.find(s=>s.id===subId); if(!sub) return;
+  downloadScorecard(subId, rank);
+  const text = `My TCE Score Card 🏆\n${sub.testTitle}\nScore: ${sub.score}/${sub.maxScore} | Rank #${rank} | Accuracy: ${sub.accuracy}%\n- TCE The Competitive Edge`;
+  window.open('https://wa.me/?text='+encodeURIComponent(text), '_blank');
+}
+
+/* ---------- QUICK QUIZ TAB (GK Only) ---------- */
+function tplQuiz(){
+  return `
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div>
+      <h2 class="font-display font-800 text-2xl mb-1">Dynamic <span class="gold-text">Quick Quiz</span></h2>
+      <p class="muted text-sm">General Knowledge &amp; Current Affairs only — questions are pulled randomly from the GK question bank.</p>
+    </div>
+    <span class="badge bg-emerald-500/20 text-emerald-400 w-fit">✅ 100% FREE — Open for All Visitors</span>
+  </div>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" id="quizModes"></div>`;
+}
+function initQuizTab(){
+  const modes = [[5,3],[10,7],[15,10],[20,12]];
+  document.getElementById('quizModes').innerHTML = modes.map(([q,m])=>`
+    <div class="card glow-border rounded-2xl p-5 text-center">
+      <i data-lucide="zap" class="w-6 h-6 gold-text mx-auto mb-2"></i>
+      <p class="font-display font-800 text-xl">${q} Qs</p>
+      <p class="text-xs muted mb-4">${m} minutes</p>
+      <button onclick="startQuickQuiz(${q},${m})" class="w-full btn-gold rounded-lg py-2.5 text-xs font-bold">Start Quiz</button>
+    </div>`).join('');
+  lucide.createIcons();
+}
+function startQuickQuiz(qCount, mins){
+  const user = getCurrentUser();
+  if(!user){ alert('Please login to start the quiz.'); openLoginModal(); return; }
+  const gkOnly = DB.quizPool.filter(q=>q.subject==='gk');
+  if(gkOnly.length===0){ alert('No GK questions are available yet. Please check back soon.'); return; }
+  const pool = shuffle(gkOnly).slice(0, Math.min(qCount, gkOnly.length)).map(q=>({...q, options: shuffle(q.options)}));
+  examState = {
+    testId: 'quiz_'+qCount, source:'quiz', subject:'quiz', title: `Quick Quiz — GK — ${pool.length} Questions`, durationSec: mins*60, remaining: mins*60,
+    marksCorrect: 1, marksWrong: 0.25, questions: pool, answers: new Array(pool.length).fill(null),
+    status: new Array(pool.length).fill('not-visited'), current:0, violations:0, lang:'en', timer:null, startedAt: Date.now()
+  };
+  examState.status[0]='not-answered';
+  renderExamScreen(); startExamTimer(); attachAntiCheat(); requestFullscreenSafe();
+}
+
+/* ---------- STUDY MATERIALS TAB (5 categories + view counters) ---------- */
+let materialCat = 'math';
+function tplMaterials(){
+  const cats = [['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['currentAffairs','Current Affairs']];
+  return `
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div>
+      <h2 class="font-display font-800 text-2xl mb-1">Study <span class="gold-text">Materials</span></h2>
+      <p class="muted text-sm">All PDFs are watermarked and licensed to your name automatically to prevent piracy.</p>
+    </div>
+    <span class="badge bg-emerald-500/20 text-emerald-400 w-fit">✅ 100% FREE — View &amp; Download for Everyone</span>
+  </div>
+  <div class="flex gap-2 mb-6 flex-wrap">
+    ${cats.map(c=>`<button onclick="materialCat='${c[0]}';initMaterialsTab()" id="mc_${c[0]}" class="px-4 py-2 rounded-lg text-xs font-bold ${materialCat===c[0]?'tab-active':'card2 muted'}">${c[1]}</button>`).join('')}
+  </div>
+  <div id="materialsList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
+}
+function initMaterialsTab(){
+  document.querySelectorAll('[id^="mc_"]').forEach(b=>b.classList.remove('tab-active'));
+  const active = document.getElementById('mc_'+materialCat); if(active) active.classList.add('tab-active');
+  const list = document.getElementById('materialsList');
+  const mats = DB.materials[materialCat]||[];
+  list.innerHTML = mats.length? mats.map(m=>`
+    <div class="card glow-border rounded-2xl p-5">
+      <i data-lucide="file-text" class="w-8 h-8 gold-text mb-3"></i>
+      <h3 class="font-display font-700 text-sm mb-1">${m.title}</h3>
+      <p class="text-[10px] muted mb-3 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i>${m.views||0} views</p>
+      <div class="flex gap-2">
+        <button onclick="previewMaterial('${m.id}','${materialCat}')" class="flex-1 btn-ghost rounded-lg py-2 text-xs font-bold">Preview</button>
+        <button onclick="downloadMaterial('${m.id}','${materialCat}')" class="flex-1 btn-gold rounded-lg py-2 text-xs font-bold">Download</button>
+      </div>
+    </div>`).join('') : '<p class="muted text-sm col-span-full">No materials uploaded yet in this category.</p>';
+  lucide.createIcons();
+}
+async function buildWatermarkedPdfBytes(title){
+  const user = getCurrentUser();
+  const { PDFDocument, rgb, degrees, StandardFonts } = PDFLib;
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const page = pdfDoc.addPage([595,842]);
+  page.drawText('TCE - The Competitive Edge', {x:50,y:780,size:20,font,color:rgb(0.83,0.55,0.05)});
+  page.drawText(title, {x:50,y:745,size:14,font,color:rgb(0.1,0.1,0.1)});
+  page.drawText('Sample study material content goes here. Replace with real PDF via Admin Panel.', {x:50,y:700,size:10,font,color:rgb(0.4,0.4,0.4)});
+  page.drawText('TCE', {x:180,y:420,size:90,font,color:rgb(0.9,0.9,0.9),opacity:0.08,rotate:degrees(30)});
+  const licenseText = `Licensed to: ${user?user.name:'Guest'} | ${user?(user.phone||user.email):''}`;
+  page.drawText(licenseText, {x:50,y:30,size:9,font,color:rgb(0.6,0.6,0.6)});
+  return await pdfDoc.save();
+}
+function incrementMaterialView(id, cat){
+  const mat = (DB.materials[cat]||[]).find(m=>m.id===id);
+  if(mat){ mat.views = (mat.views||0)+1; saveDB(); }
+}
+async function previewMaterial(id, cat){
+  const mat = (DB.materials[cat]||[]).find(m=>m.id===id);
+  const user = getCurrentUser();
+  if(!user){ alert('Please login to view watermarked materials.'); openLoginModal(); return; }
+  incrementMaterialView(id, cat);
+  const bytes = await buildWatermarkedPdfBytes(mat.title);
+  const blob = new Blob([bytes], {type:'application/pdf'});
+  const url = URL.createObjectURL(blob);
+  openModalWide(`
+    <div class="card p-4">
+      <div class="flex justify-between items-center mb-3"><h3 class="font-display font-700 text-sm">${mat.title} — Preview</h3><button onclick="closeModal();initMaterialsTab()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <iframe src="${url}" class="w-full h-[70vh] rounded-lg" style="border:1px solid var(--border)"></iframe>
+      <p class="text-[11px] muted mt-2">Licensed to ${user.name} — unauthorized redistribution is prohibited.</p>
+    </div>`);
+}
+async function downloadMaterial(id, cat){
+  const mat = (DB.materials[cat]||[]).find(m=>m.id===id);
+  const user = getCurrentUser();
+  if(!user){ alert('Please login to download watermarked materials.'); openLoginModal(); return; }
+  const bytes = await buildWatermarkedPdfBytes(mat.title);
+  const blob = new Blob([bytes], {type:'application/pdf'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = mat.title.replace(/\s+/g,'_')+'_TCE.pdf'; a.click();
+}
+
+/* ---------- BATCHES TAB (dynamic) ---------- */
+function tplBatches(){
+  return `
+  <div class="mb-6">
+    <h2 class="font-display font-800 text-2xl mb-1">Batches &amp; <span class="gold-text">Direct Enrollment</span></h2>
+    <p class="muted text-sm">Choose a batch and enroll instantly via UPI.</p>
+  </div>
+  <div class="space-y-6">
+    ${DB.batches.filter(b=>b.active).map(b=>`
+    <div class="card glow-border rounded-2xl overflow-hidden">
+      <div class="gold-grad p-6 sm:p-8">
+        <span class="badge bg-black/20 text-black inline-block mb-2">Featured Batch${b.examCategory && b.examCategory!=='All Exams' ? ' • '+b.examCategory : ''}</span>
+        <h3 class="font-display font-800 text-2xl text-black">${b.name}</h3>
+        <p class="text-black/80 text-sm mt-1">${priceLabel(b.price)} — Monthly enrollment fee</p>
+      </div>
+      <div class="p-6 sm:p-8 grid sm:grid-cols-2 gap-8">
+        <div>
+          <h4 class="font-semibold text-sm mb-3">Class Routine</h4>
+          <div class="space-y-2 text-sm muted">
+            ${b.timetable.map(t=>`<div class="flex justify-between card2 rounded-lg px-3 py-2"><span>${t[0]}</span><span class="gold-text">${t[1]}</span></div>`).join('')}
+          </div>
+        </div>
+        <div>
+          <h4 class="font-semibold text-sm mb-3">What's Included</h4>
+          <ul class="space-y-2 text-sm muted">${b.features.map(f=>`<li class="flex gap-2 items-center"><i data-lucide="check-circle" class="w-4 h-4 gold-text"></i>${f}</li>`).join('')}</ul>
+        </div>
+      </div>
+      <div class="px-6 sm:px-8 pb-8">
+        <button onclick="openEnrollModal('batch','${b.id}')" class="w-full sm:w-auto btn-gold rounded-lg px-8 py-3 text-sm font-bold">Enroll Now — ${priceLabel(b.price)}</button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ---------- DASHBOARD TAB ---------- */
+function tplDashboard(){
+  const user = getCurrentUser();
+  if(!user){
+    return `<div class="text-center py-16"><i data-lucide="lock" class="w-10 h-10 gold-text mx-auto mb-3"></i><p class="muted mb-4">Please login to view your dashboard.</p><button onclick="openLoginModal()" class="btn-gold rounded-lg px-6 py-2.5 text-sm font-bold">Student Login</button></div>`;
+  }
+  const rec = DB.students.find(s=>s.id===user.id) || user;
+  const subs = DB.submissions.filter(s=>s.studentId===user.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const quizSubs = subs.filter(s=>s.testType==='quiz');
+  const pyqSubs = subs.filter(s=>s.testType==='pyq');
+  const mockSubs = subs.filter(s=>s.testType!=='quiz' && s.testType!=='pyq');
+  return `
+  <div class="grid sm:grid-cols-4 gap-4 mb-8">
+    <div class="card glow-border rounded-2xl p-5 sm:col-span-1">
+      <div class="w-14 h-14 rounded-full gold-grad flex items-center justify-center font-display font-800 text-ink text-xl mb-3">${user.name[0]}</div>
+      <p class="font-display font-700">${user.name}</p><p class="text-xs muted">${rec.phone||rec.email||''}</p>
+      <span class="badge mt-3 inline-block ${rec.paymentStatus==='Approved'?'bg-emerald-500/20 text-emerald-400':(rec.paymentStatus==='Pending'?'bg-amber-500/20 gold-text':'bg-gray-500/20 muted')}">${rec.paymentStatus}</span>
+      <p class="text-xs muted mt-2">Batch: <span class="text-current font-semibold">${rec.batch||'—'}</span></p>
+    </div>
+    <div class="card glow-border rounded-2xl p-5 text-center flex flex-col justify-center"><p class="text-[10px] muted uppercase">Mock Attempts</p><p class="font-display font-800 text-2xl gold-text">${mockSubs.length}</p></div>
+    <div class="card glow-border rounded-2xl p-5 text-center flex flex-col justify-center"><p class="text-[10px] muted uppercase">PYQ Attempts</p><p class="font-display font-800 text-2xl gold-text">${pyqSubs.length}</p></div>
+    <div class="card glow-border rounded-2xl p-5 text-center flex flex-col justify-center"><p class="text-[10px] muted uppercase">Quiz Attempts</p><p class="font-display font-800 text-2xl gold-text">${quizSubs.length}</p></div>
+  </div>
+  <h3 class="font-display font-700 text-lg mb-3">Mock Test Score History</h3>
+  <div class="overflow-x-auto mb-8"><table class="w-full text-xs card glow-border rounded-xl overflow-hidden">
+    <thead class="card2"><tr class="text-left muted"><th class="p-3">Test</th><th>Attempt</th><th>Score</th><th>Accuracy</th><th>Date</th></tr></thead>
+    <tbody>${mockSubs.length? mockSubs.map(s=>`<tr style="border-top:1px solid var(--border)"><td class="p-3">${s.testTitle}</td><td>#${s.attempt}</td><td class="gold-text font-semibold">${s.score}/${s.maxScore}</td><td>${s.accuracy}%</td><td>${new Date(s.date).toLocaleDateString()}</td></tr>`).join('') : `<tr><td class="p-3 muted" colspan="5">No mock attempts yet. <button onclick="setTab('mocks')" class="gold-text underline">Take one now</button></td></tr>`}</tbody>
+  </table></div>
+  <h3 class="font-display font-700 text-lg mb-3">PYQ Attempts</h3>
+  <div class="overflow-x-auto mb-8"><table class="w-full text-xs card glow-border rounded-xl overflow-hidden">
+    <thead class="card2"><tr class="text-left muted"><th class="p-3">PYQ Set</th><th>Attempt</th><th>Score</th><th>Accuracy</th><th>Date</th></tr></thead>
+    <tbody>${pyqSubs.length? pyqSubs.map(s=>`<tr style="border-top:1px solid var(--border)"><td class="p-3">${s.testTitle}</td><td>#${s.attempt}</td><td class="gold-text font-semibold">${s.score}/${s.maxScore}</td><td>${s.accuracy}%</td><td>${new Date(s.date).toLocaleDateString()}</td></tr>`).join('') : `<tr><td class="p-3 muted" colspan="5">No PYQ attempts yet. <button onclick="setTab('pyq')" class="gold-text underline">Browse PYQ Hub</button></td></tr>`}</tbody>
+  </table></div>
+  <h3 class="font-display font-700 text-lg mb-3">Quiz Stats</h3>
+  <div class="overflow-x-auto"><table class="w-full text-xs card glow-border rounded-xl overflow-hidden">
+    <thead class="card2"><tr class="text-left muted"><th class="p-3">Quiz</th><th>Score</th><th>Accuracy</th><th>Date</th></tr></thead>
+    <tbody>${quizSubs.length? quizSubs.map(s=>`<tr style="border-top:1px solid var(--border)"><td class="p-3">${s.testTitle}</td><td class="gold-text font-semibold">${s.score}/${s.maxScore}</td><td>${s.accuracy}%</td><td>${new Date(s.date).toLocaleDateString()}</td></tr>`).join('') : `<tr><td class="p-3 muted" colspan="4">No quiz attempts yet. <button onclick="setTab('quiz')" class="gold-text underline">Try one now</button></td></tr>`}</tbody>
+  </table></div>`;
+}
+
+/* ---------- NOTICES & CONTACT TAB ---------- */
+function tplNotices(){
+  return `
+  <div class="grid lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2">
+      <h2 class="font-display font-800 text-2xl mb-4">Notice <span class="gold-text">Board</span></h2>
+      <div class="space-y-4">
+        ${DB.notices.slice().reverse().map(n=>`<div class="card glow-border rounded-xl p-4"><div class="flex justify-between items-start mb-1"><p class="font-semibold text-sm">${n.title}</p><span class="text-[10px] muted whitespace-nowrap">${n.date}</span></div><p class="text-xs muted">${n.body}</p></div>`).join('')}
+      </div>
+    </div>
+    <div>
+      <h2 class="font-display font-800 text-2xl mb-4">Contact <span class="gold-text">Us</span></h2>
+      <div class="card glow-border rounded-2xl p-5 mb-5">
+        <h4 class="font-semibold text-xs uppercase tracking-wide muted mb-3">Institute Address</h4>
+        <p class="text-sm flex items-start gap-2 mb-3"><i data-lucide="map-pin" class="w-4 h-4 gold-text shrink-0 mt-0.5"></i> Near Nahata Anchal, Nahata, P.S. Gopalnagar, North 24 Parganas, West Bengal, PIN - 743290</p>
+        <p class="text-sm gold-text font-semibold flex items-center gap-2 mb-2"><i data-lucide="globe" class="w-3.5 h-3.5"></i> Tcenahata.in</p>
+        <p class="text-sm muted flex items-center gap-2 mb-2"><i data-lucide="phone" class="w-3.5 h-3.5 gold-text"></i> +91 73846 44030</p>
+        <p class="text-sm muted flex items-center gap-2"><i data-lucide="mail" class="w-3.5 h-3.5 gold-text"></i> tcenahata@gmail.com</p>
+      </div>
+      <div class="card glow-border rounded-2xl p-5 mb-5">
+        <h4 class="font-semibold text-xs uppercase tracking-wide muted mb-3">Faculty Contact</h4>
+        <div class="space-y-3">
+          <a href="https://wa.me/919749587349?text=Hello%20Sir%2C%20I%20want%20to%20know%20more%20about%20TCE%20classes" target="_blank" class="flex items-center justify-between card2 rounded-lg px-3 py-2.5">
+            <div><p class="text-sm font-semibold">Tanujoy Mallick</p><p class="text-xs muted">+91 97495 87349</p></div>
+            <i data-lucide="message-circle" class="w-4 h-4 text-[#25D366]"></i>
+          </a>
+          <a href="https://wa.me/917384644030?text=Hello%20Sir%2C%20I%20want%20to%20know%20more%20about%20TCE%20classes" target="_blank" class="flex items-center justify-between card2 rounded-lg px-3 py-2.5">
+            <div><p class="text-sm font-semibold">Prakash Sarkar</p><p class="text-xs muted">+91 73846 44030</p></div>
+            <i data-lucide="message-circle" class="w-4 h-4 text-[#25D366]"></i>
+          </a>
+        </div>
+      </div>
+      <div class="card glow-border rounded-2xl p-5">
+        <div class="space-y-3">
+          <input id="cf_name" type="text" placeholder="Your Name" class="w-full rounded-lg px-3 py-2.5 text-sm">
+          <input id="cf_phone" type="tel" placeholder="Phone Number" class="w-full rounded-lg px-3 py-2.5 text-sm">
+          <textarea id="cf_msg" rows="4" placeholder="Your message / inquiry" class="w-full rounded-lg px-3 py-2.5 text-sm"></textarea>
+          <button onclick="submitInquiry()" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">Send Inquiry</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function submitInquiry(){
+  const name = document.getElementById('cf_name').value.trim();
+  const phone = document.getElementById('cf_phone').value.trim();
+  const msg = document.getElementById('cf_msg').value.trim();
+  if(!name||!phone||!msg){ alert('Please fill all fields.'); return; }
+  DB.inquiries.push({id:uid('inq'), name, phone, msg, date:new Date().toISOString()}); saveDB();
+  alert('Thank you! Your inquiry has been submitted. We will contact you soon.');
+  document.getElementById('cf_name').value=''; document.getElementById('cf_phone').value=''; document.getElementById('cf_msg').value='';
+}
+
+/* =========================================================================
+   PWA INSTALL PROMPT
+========================================================================= */
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault(); deferredInstallPrompt = e;
+  const btn = document.getElementById('installBtn'); btn.classList.remove('hidden'); btn.classList.add('flex');
+});
+function triggerInstall(){
+  if(!deferredInstallPrompt){ alert('App install is available once your browser detects PWA eligibility (visit over HTTPS).'); return; }
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.finally(()=>{ deferredInstallPrompt=null; document.getElementById('installBtn').classList.add('hidden'); });
+}
+
+
+/* =========================================================================
+   ==========================  ADMIN PANEL  ================================
+========================================================================= */
+function openAdminLogin(){
+  openModal(`
+    <div class="card glow-border rounded-2xl p-6">
+      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Admin Login</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="space-y-3">
+        <input id="adm_email" type="email" placeholder="Admin Email" autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')adminLogin()" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="adm_pass" type="password" placeholder="Password" autocomplete="off" onkeydown="if(event.key==='Enter')adminLogin()" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <p id="adm_error" class="hidden text-xs text-red-400"></p>
+        <button onclick="adminLogin()" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">Login</button>
+      </div>
+    </div>`);
+  setTimeout(()=>{ const el=document.getElementById('adm_email'); if(el) el.focus(); },50);
+}
+function adminLogin(){
+  const emailInput = document.getElementById('adm_email');
+  const passInput = document.getElementById('adm_pass');
+  const errEl = document.getElementById('adm_error');
+  const email = (emailInput.value || '').trim().toLowerCase();
+  const pass = (passInput.value || '').trim();
+  const validEmail = ADMIN_EMAIL.trim().toLowerCase();
+  const validPass = getAdminPassword();
+  if(email === validEmail && pass === validPass){
+    localStorage.setItem(ADM_KEY, '1'); closeModal(); openAdminPanel();
+  } else {
+    if(errEl){ errEl.textContent = 'Invalid admin credentials. Please check your email and password.'; errEl.classList.remove('hidden'); }
+    else{ alert('Invalid admin credentials.'); }
+    if(passInput) passInput.value = '';
+  }
+}
+function adminLogout(){ localStorage.removeItem(ADM_KEY); closeModal(); }
+
+let adminTab = 'students';
+function openAdminPanel(){
+  if(!isAdmin()){ openAdminLogin(); return; }
+  openModalWide(`
+    <div class="card p-0 rounded-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 card2" style="border-bottom:1px solid var(--border)">
+        <h3 class="font-display font-800 text-lg">Admin <span class="gold-text">Control Panel</span></h3>
+        <div class="flex gap-2"><button onclick="adminLogout()" class="btn-ghost rounded-md px-3 py-1.5 text-xs font-bold">Logout</button><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      </div>
+      <div class="flex gap-1 px-5 pt-3 overflow-x-auto hide-scrollbar">
+        ${[['students','Students'],['results','Mock Results'],['questions','Mock/PYQ Manager'],['pyq','PYQ Uploader'],['gkquiz','GK Quiz Uploader'],['materials','Materials'],['batches','Batches'],['mentors','Mentors'],['content','Banners/Ticker'],['settings','Settings']].map(t=>`
+          <button onclick="adminTab='${t[0]}';renderAdminBody()" id="adt_${t[0]}" class="px-3 py-2 rounded-t-lg text-xs font-bold whitespace-nowrap ${adminTab===t[0]?'tab-active':'muted'}">${t[1]}</button>`).join('')}
+      </div>
+      <div id="adminBody" class="p-5 max-h-[65vh] overflow-y-auto"></div>
+    </div>`);
+  renderAdminBody();
+}
+function renderAdminBody(){
+  document.querySelectorAll('[id^="adt_"]').forEach(b=>b.classList.remove('tab-active'));
+  const a = document.getElementById('adt_'+adminTab); if(a) a.classList.add('tab-active');
+  const body = document.getElementById('adminBody');
+  if(adminTab==='students') body.innerHTML = adminStudentsView();
+  else if(adminTab==='results') body.innerHTML = adminResultsView();
+  else if(adminTab==='questions') body.innerHTML = adminQuestionsView();
+  else if(adminTab==='pyq') body.innerHTML = adminPyqView();
+  else if(adminTab==='gkquiz') body.innerHTML = adminGkQuizView();
+  else if(adminTab==='materials') body.innerHTML = adminMaterialsView();
+  else if(adminTab==='batches') body.innerHTML = adminBatchesView();
+  else if(adminTab==='mentors') body.innerHTML = adminMentorsView();
+  else if(adminTab==='content') body.innerHTML = adminContentView();
+  else if(adminTab==='settings') body.innerHTML = adminSettingsView();
+  lucide.createIcons();
+  if(adminTab==='results') initAdminResultsFilters();
+}
+
+/* --- Students --- */
+function adminStudentsView(){
+  return `
+  <div class="flex justify-between items-center mb-4">
+    <p class="text-sm muted">${DB.students.length} registered students</p>
+    <button onclick="exportStudentsExcel()" class="btn-gold rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>Export to Excel</button>
+  </div>
+  <div class="overflow-x-auto"><table class="w-full text-xs">
+    <thead class="card2"><tr class="text-left muted"><th class="p-2">#</th><th class="p-2">Name</th><th class="p-2">Phone</th><th class="p-2">Email</th><th class="p-2">Address</th><th class="p-2">Joined</th><th class="p-2">Status</th><th class="p-2">Actions</th></tr></thead>
+    <tbody>
+      ${DB.students.map((s,i)=>`
+        <tr style="border-top:1px solid var(--border)">
+          <td class="p-2">${i+1}</td><td class="p-2">${s.name}</td><td class="p-2">${s.phone}</td><td class="p-2">${s.email}</td><td class="p-2">${s.address||'-'}</td><td class="p-2">${s.joinDate}</td>
+          <td class="p-2"><span class="badge ${s.paymentStatus==='Approved'?'bg-emerald-500/20 text-emerald-400':(s.paymentStatus==='Pending'?'bg-amber-500/20 gold-text':'bg-gray-500/20 muted')}">${s.paymentStatus}</span></td>
+          <td class="p-2 flex gap-1"><button onclick="grantAccess('${s.id}')" class="px-2 py-1 rounded bg-emerald-600 text-white text-[10px] font-bold">Grant</button><button onclick="blockStudent('${s.id}')" class="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold">Block</button></td>
+        </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+function grantAccess(id){ const s=DB.students.find(x=>x.id===id); if(s){ s.paymentStatus='Approved'; if(s.batch==='—')s.batch='WBP Special'; saveDB(); renderAdminBody(); } }
+function blockStudent(id){ const s=DB.students.find(x=>x.id===id); if(s){ s.paymentStatus='Blocked'; saveDB(); renderAdminBody(); } }
+function exportStudentsExcel(){
+  const rows = DB.students.map((s,i)=>({SerialNo:i+1, Name:s.name, Phone:s.phone, Email:s.email, Address:s.address, JoinDate:s.joinDate, PaymentStatus:s.paymentStatus, Batch:s.batch}));
+  const ws = XLSX.utils.json_to_sheet(rows); const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Students'); XLSX.writeFile(wb, 'TCE_Students.xlsx');
+}
+
+/* --- Dedicated Mock Results Dashboard (subject + test filters, excludes quiz/pyq) --- */
+let resSubjectFilter='all', resTestFilter='all';
+function adminResultsView(){
+  return `
+  <div class="flex flex-wrap gap-3 items-center mb-4">
+    <select id="resSubjectSel" class="rounded-lg px-3 py-2 text-xs">
+      <option value="all">All Subjects</option>
+      <option value="math">Mathematics</option>
+      <option value="english">English</option>
+      <option value="reasoning">Reasoning</option>
+      <option value="gk">General Knowledge (GK)</option>
+      <option value="full">Full Combined Mock</option>
+    </select>
+    <select id="resTestSel" class="rounded-lg px-3 py-2 text-xs"><option value="all">All Tests</option></select>
+    <button onclick="exportResultsExcel()" class="btn-gold rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5 ml-auto"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>Export Results</button>
+  </div>
+  <div id="resTableWrap" class="overflow-x-auto"></div>`;
+}
+function initAdminResultsFilters(){
+  const subjSel = document.getElementById('resSubjectSel');
+  const testSel = document.getElementById('resTestSel');
+  subjSel.value = resSubjectFilter;
+  function populateTests(){
+    const subj = subjSel.value;
+    let opts = '<option value="all">All Tests</option>';
+    if(subj!=='all'){ (DB.mockTests[subj]||[]).forEach(t=>{ opts += `<option value="${t.id}">${t.title}</option>`; }); }
+    testSel.innerHTML = opts; testSel.value='all'; resTestFilter='all';
+  }
+  populateTests();
+  subjSel.onchange = ()=>{ resSubjectFilter = subjSel.value; populateTests(); renderResultsTable(); };
+  testSel.onchange = ()=>{ resTestFilter = testSel.value; renderResultsTable(); };
+  renderResultsTable();
+}
+function renderResultsTable(){
+  let subs = DB.submissions.filter(s=> s.testType!=='quiz' && s.testType!=='pyq');
+  if(resSubjectFilter!=='all') subs = subs.filter(s=>s.subject===resSubjectFilter);
+  if(resTestFilter!=='all') subs = subs.filter(s=>s.testId===resTestFilter);
+  // rank: best score per student within filtered set, sorted desc
+  const ranked = subs.slice().sort((a,b)=> b.score-a.score || a.timeTakenSec-b.timeTakenSec);
+  document.getElementById('resTableWrap').innerHTML = `
+  <table class="w-full text-xs">
+    <thead class="card2"><tr class="text-left muted"><th class="p-2">Rank</th><th class="p-2">Student</th><th class="p-2">Roll/Phone</th><th class="p-2">Test</th><th class="p-2">Score</th><th class="p-2">Accuracy</th><th class="p-2">Time Taken</th><th class="p-2">Submitted</th></tr></thead>
+    <tbody>${ranked.length? ranked.map((s,i)=>`
+      <tr style="border-top:1px solid var(--border)">
+        <td class="p-2 gold-text font-bold">#${i+1}</td><td class="p-2">${s.studentName}</td><td class="p-2">${s.studentPhone||'-'}</td><td class="p-2">${s.testTitle} (Attempt #${s.attempt})</td>
+        <td class="p-2 font-semibold">${s.score}/${s.maxScore}</td><td class="p-2">${s.accuracy}%</td><td class="p-2">${Math.floor(s.timeTakenSec/60)}m ${s.timeTakenSec%60}s</td><td class="p-2">${new Date(s.date).toLocaleString()}</td>
+      </tr>`).join('') : `<tr><td class="p-2 muted" colspan="8">No matching mock test submissions yet.</td></tr>`}</tbody>
+  </table>`;
+}
+function exportResultsExcel(){
+  let subs = DB.submissions.filter(s=> s.testType!=='quiz' && s.testType!=='pyq');
+  if(resSubjectFilter!=='all') subs = subs.filter(s=>s.subject===resSubjectFilter);
+  if(resTestFilter!=='all') subs = subs.filter(s=>s.testId===resTestFilter);
+  const rows = subs.map((s,i)=>({Rank:i+1, Student:s.studentName, Phone:s.studentPhone, Test:s.testTitle, Attempt:s.attempt, Score:s.score, MaxScore:s.maxScore, Accuracy:s.accuracy, TimeTakenSec:s.timeTakenSec, Date:new Date(s.date).toLocaleString()}));
+  const ws = XLSX.utils.json_to_sheet(rows); const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'MockResults'); XLSX.writeFile(wb, 'TCE_MockResults.xlsx');
+}
+
+/* --- Mock/PYQ Manager: create, edit, delete tests & questions --- */
+let qbSubject='math', qbTestId=null;
+function adminQuestionsView(){
+  const subjects=['math','english','reasoning','gk','full'];
+  const tests = DB.mockTests[qbSubject]||[];
+  if(!qbTestId && tests.length) qbTestId = tests[0].id;
+  const test = tests.find(t=>t.id===qbTestId);
+  return `
+  <div class="flex flex-wrap gap-2 mb-4">${subjects.map(s=>`<button onclick="qbSubject='${s}';qbTestId=null;renderAdminBody()" class="px-3 py-1.5 rounded-lg text-xs font-bold ${qbSubject===s?'tab-active':'card2 muted'}">${s.toUpperCase()}</button>`).join('')}</div>
+  <div class="flex flex-wrap gap-2 mb-4 items-center">
+    <select onchange="qbTestId=this.value;renderAdminBody()" class="rounded-lg px-3 py-2 text-xs">${tests.map(t=>`<option value="${t.id}" ${t.id===qbTestId?'selected':''}>${t.title} ${t.isDemo?'(Free Demo)':''}</option>`).join('')}</select>
+    <button onclick="addNewMockTest()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">+ New Test</button>
+    ${test?`
+    <button onclick="toggleDemoFlag()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">${test.isDemo?'Mark as Premium':'Mark as Free Demo'}</button>
+    <button onclick="editTestMeta()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">Edit Test Info</button>
+    <button onclick="printOfflinePaper('mock')" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1"><i data-lucide="printer" class="w-3.5 h-3.5"></i>Print / Export Offline Paper</button>
+    <button onclick="deleteTest('mock')" class="rounded-lg px-3 py-2 text-xs font-bold bg-red-600 text-white flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete Test</button>`:''}
+  </div>
+  ${test?`
+  <div class="card2 rounded-xl p-4 mb-4">
+    <p class="text-xs font-bold muted uppercase mb-2">Add Question (English and/or Bengali — admin's choice)</p>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <textarea id="q_en" rows="2" placeholder="Question (English)" class="rounded-lg px-3 py-2 text-xs"></textarea>
+      <textarea id="q_bn" rows="2" placeholder="প্রশ্ন (বাংলা) — optional" class="rounded-lg px-3 py-2 text-xs bn"></textarea>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <input id="q_a" type="text" placeholder="Option A" class="rounded-lg px-3 py-2 text-xs"><input id="q_b" type="text" placeholder="Option B" class="rounded-lg px-3 py-2 text-xs">
+      <input id="q_c" type="text" placeholder="Option C" class="rounded-lg px-3 py-2 text-xs"><input id="q_d" type="text" placeholder="Option D" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <div class="grid sm:grid-cols-3 gap-2 mb-2">
+      <select id="q_correct" class="rounded-lg px-3 py-2 text-xs"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      <input id="q_exp" type="text" placeholder="Explanation" class="rounded-lg px-3 py-2 text-xs">
+      <input id="q_solimg" type="text" placeholder="Solution photo URL/Base64 (optional)" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <button onclick="addQuestionToTest('mock')" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">+ Add Question</button>
+  </div>
+  <div class="card2 rounded-xl p-4 mb-4">
+    <p class="text-xs font-bold muted uppercase mb-2">Bulk Uploader — paste 50-100 Qs as JSON array</p>
+    <textarea id="bulkJson" rows="4" placeholder='[{"textEn":"...","textBn":"","options":[{"key":"A","textEn":"..."},...],"correct":"A","explanation":"..."}]' class="w-full rounded-lg px-3 py-2 text-xs font-mono"></textarea>
+    <button onclick="bulkUploadQuestions('mock')" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold mt-2">Upload Bulk</button>
+  </div>
+  <p class="text-xs font-bold muted uppercase mb-2">Questions in "${test.title}" (${test.questions.length})</p>
+  <div class="space-y-2">
+    ${test.questions.map((q,i)=>`
+      <div class="card rounded-lg p-3 flex justify-between items-start gap-3">
+        <div><p class="text-xs font-medium">${i+1}. ${q.textEn} ${q.textBn?`<span class="bn muted block text-[11px]">${q.textBn}</span>`:''}</p><p class="text-[10px] muted mt-1">Correct: ${q.correct}</p></div>
+        <div class="flex gap-2 shrink-0"><button onclick="editQuestion('mock','${q.id}')" class="text-amber-400"><i data-lucide="pencil" class="w-4 h-4"></i></button><button onclick="deleteQuestion('mock','${q.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>
+      </div>`).join('')}
+  </div>` : '<p class="muted text-sm">No tests in this subject yet.</p>'}`;
+}
+function currentTestRef(kind){
+  if(kind==='mock') return (DB.mockTests[qbSubject]||[]).find(t=>t.id===qbTestId);
+  if(kind==='pyq') return DB.pyqSets.find(t=>t.id===pyqAdminId);
+  return null;
+}
+function addNewMockTest(){
+  const title = prompt('Test title:'); if(!title) return;
+  const examCategory = prompt('Exam category (e.g. "All Exams", "WBP Constable", "Railway (RRB)", "SSC GD"):', 'All Exams') || 'All Exams';
+  const nt = {id:uid('mt'), subject:qbSubject, title, isDemo:false, examCategory, durationMin:20, marksCorrect:2, marksWrong:0.5, questions:[]};
+  DB.mockTests[qbSubject].push(nt); qbTestId=nt.id; saveDB(); renderAdminBody();
+}
+function toggleDemoFlag(){ const test = currentTestRef('mock'); if(test){ test.isDemo=!test.isDemo; saveDB(); renderAdminBody(); } }
+function editTestMeta(){
+  const test = currentTestRef('mock'); if(!test) return;
+  const title = prompt('Test title:', test.title); if(title===null) return;
+  const examCategory = prompt('Exam category (e.g. "All Exams", "WBP Constable", "Railway (RRB)", "SSC GD"):', test.examCategory||'All Exams'); if(examCategory===null) return;
+  const dur = prompt('Duration (minutes):', test.durationMin); if(dur===null) return;
+  const mc = prompt('Marks for correct answer:', test.marksCorrect); if(mc===null) return;
+  const mw = prompt('Negative marking for wrong answer (e.g. 0, 0.25, 0.33, 0.5):', test.marksWrong); if(mw===null) return;
+  test.title = title.trim()||test.title; test.examCategory = examCategory.trim()||test.examCategory; test.durationMin = parseFloat(dur)||test.durationMin; test.marksCorrect = parseFloat(mc)||test.marksCorrect; test.marksWrong = parseFloat(mw)>=0? parseFloat(mw) : test.marksWrong;
+  saveDB(); renderAdminBody();
+}
+function deleteTest(kind){
+  if(kind==='mock'){
+    const test = currentTestRef('mock'); if(!test) return;
+    if(!confirm(`Delete "${test.title}" permanently? This cannot be undone.`)) return;
+    DB.mockTests[qbSubject] = DB.mockTests[qbSubject].filter(t=>t.id!==test.id); qbTestId=null; saveDB(); renderAdminBody();
+  } else {
+    const test = DB.pyqSets.find(t=>t.id===pyqAdminId); if(!test) return;
+    if(!confirm(`Delete PYQ set "${test.title}" permanently?`)) return;
+    DB.pyqSets = DB.pyqSets.filter(t=>t.id!==test.id); pyqAdminId=null; saveDB(); renderAdminBody();
+  }
+}
+function addQuestionToTest(kind){
+  const test = currentTestRef(kind);
+  const en = document.getElementById('q_en').value.trim();
+  const bn = document.getElementById('q_bn').value.trim();
+  const a=document.getElementById('q_a').value.trim(), b=document.getElementById('q_b').value.trim(), c=document.getElementById('q_c').value.trim(), d=document.getElementById('q_d').value.trim();
+  const correct = document.getElementById('q_correct').value;
+  const exp = document.getElementById('q_exp').value.trim();
+  const solimg = document.getElementById('q_solimg').value.trim();
+  if(!en || !a || !b || !c || !d){ alert('Please fill the question and all 4 options.'); return; }
+  test.questions.push({id:uid('q'), textEn:en, textBn:bn, options:[{key:'A',textEn:a,textBn:''},{key:'B',textEn:b,textBn:''},{key:'C',textEn:c,textBn:''},{key:'D',textEn:d,textBn:''}], correct, explanation:exp, solutionImg:solimg});
+  saveDB(); renderAdminBody();
+}
+function bulkUploadQuestions(kind){
+  const test = currentTestRef(kind);
+  const raw = document.getElementById('bulkJson').value.trim();
+  try{
+    const arr = JSON.parse(raw);
+    arr.forEach(q=>{ test.questions.push({id:uid('q'), textEn:q.textEn||'', textBn:q.textBn||'', options:q.options||[], correct:q.correct||'A', explanation:q.explanation||'', solutionImg:q.solutionImg||''}); });
+    saveDB(); renderAdminBody();
+  }catch(e){ alert('Invalid JSON: '+e.message); }
+}
+function editQuestion(kind, qid){
+  const test = currentTestRef(kind);
+  const q = test.questions.find(x=>x.id===qid); if(!q) return;
+  const en = prompt('Question (English):', q.textEn); if(en===null) return;
+  const a = prompt('Option A:', q.options[0]?.textEn||''); if(a===null) return;
+  const b = prompt('Option B:', q.options[1]?.textEn||''); if(b===null) return;
+  const c = prompt('Option C:', q.options[2]?.textEn||''); if(c===null) return;
+  const d = prompt('Option D:', q.options[3]?.textEn||''); if(d===null) return;
+  const correct = prompt('Correct option (A/B/C/D):', q.correct); if(correct===null) return;
+  const exp = prompt('Explanation:', q.explanation||''); if(exp===null) return;
+  q.textEn=en; q.options=[{key:'A',textEn:a,textBn:''},{key:'B',textEn:b,textBn:''},{key:'C',textEn:c,textBn:''},{key:'D',textEn:d,textBn:''}]; q.correct=correct.toUpperCase(); q.explanation=exp;
+  saveDB(); renderAdminBody();
+}
+function deleteQuestion(kind, qid){
+  const test = currentTestRef(kind);
+  if(!confirm('Delete this question?')) return;
+  test.questions = test.questions.filter(q=>q.id!==qid);
+  saveDB(); renderAdminBody();
+}
+
+/* --- Offline Printable Paper --- */
+function printOfflinePaper(kind){
+  const test = currentTestRef(kind); if(!test) return;
+  const html = `
+  <div style="font-family:Arial, sans-serif; color:#000; padding:20px; max-width:800px; margin:0 auto;">
+    <h2 style="text-align:center;margin-bottom:4px;">TCE - The Competitive Edge</h2>
+    <p style="text-align:center;margin-top:0;font-size:12px;">Near Nahata Anchal, Nahata, P.S. Gopalnagar, North 24 Parganas, West Bengal - 743290</p>
+    <hr>
+    <h3>${test.title}</h3>
+    <p style="font-size:13px;">Duration: ${test.durationMin} min &nbsp; | &nbsp; Marks: +${test.marksCorrect} / -${test.marksWrong} &nbsp; | &nbsp; Total Questions: ${test.questions.length}</p>
+    <p style="font-size:12px;">Name: ______________________ &nbsp; Roll No: ____________ &nbsp; Date: ____________</p>
+    <hr>
+    ${test.questions.map((q,i)=>`
+      <div style="margin-bottom:14px; page-break-inside:avoid;">
+        <p style="font-weight:bold; margin-bottom:4px;">${i+1}. ${q.textEn} ${q.textBn?('&nbsp; / '+q.textBn):''}</p>
+        <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:13px;">
+          ${q.options.map(o=>`<span>(${o.key}) ${o.textEn}</span>`).join('')}
+        </div>
+      </div>`).join('')}
+    <hr>
+    <p style="font-size:11px; text-align:center;">© TCE - The Competitive Edge | tcenahata@gmail.com | +91 73846 44030</p>
+  </div>`;
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>${test.title} - Print</title></head><body>${html}</body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 400);
+}
+
+/* --- PYQ Uploader (Admin) --- */
+let pyqAdminId=null;
+function adminPyqView(){
+  if(!pyqAdminId && DB.pyqSets.length) pyqAdminId = DB.pyqSets[0].id;
+  const test = DB.pyqSets.find(t=>t.id===pyqAdminId);
+  return `
+  <div class="flex flex-wrap gap-2 mb-4 items-center">
+    <select onchange="pyqAdminId=this.value;renderAdminBody()" class="rounded-lg px-3 py-2 text-xs">${DB.pyqSets.map(t=>`<option value="${t.id}" ${t.id===pyqAdminId?'selected':''}>${t.title}</option>`).join('')}</select>
+    <button onclick="addNewPyqSet()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">+ New PYQ Set</button>
+    ${test?`<button onclick="editPyqMeta()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">Edit Set Info</button>
+    <button onclick="printOfflinePaper('pyq')" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1"><i data-lucide="printer" class="w-3.5 h-3.5"></i>Print Paper</button>
+    <button onclick="deleteTest('pyq')" class="rounded-lg px-3 py-2 text-xs font-bold bg-red-600 text-white flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete Set</button>`:''}
+  </div>
+  <div class="mb-4">
+    <p class="text-xs font-bold muted uppercase mb-2">Manage Exam Categories</p>
+    <div class="flex flex-wrap gap-2 items-center">
+      ${DB.examCategories.map(c=>`<span class="badge card2 flex items-center gap-1">${c} <button onclick="removeExamCategory('${c}')" class="text-red-400 ml-1">×</button></span>`).join('')}
+      <button onclick="addExamCategory()" class="btn-ghost rounded-lg px-2 py-1 text-[11px] font-bold">+ Add Category</button>
+    </div>
+  </div>
+  ${test?`
+  <div class="card2 rounded-xl p-4 mb-4">
+    <p class="text-xs font-bold muted uppercase mb-2">Add Question to "${test.title}"</p>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <textarea id="q_en" rows="2" placeholder="Question (English)" class="rounded-lg px-3 py-2 text-xs"></textarea>
+      <textarea id="q_bn" rows="2" placeholder="প্রশ্ন (বাংলা) — optional" class="rounded-lg px-3 py-2 text-xs bn"></textarea>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <input id="q_a" type="text" placeholder="Option A" class="rounded-lg px-3 py-2 text-xs"><input id="q_b" type="text" placeholder="Option B" class="rounded-lg px-3 py-2 text-xs">
+      <input id="q_c" type="text" placeholder="Option C" class="rounded-lg px-3 py-2 text-xs"><input id="q_d" type="text" placeholder="Option D" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <div class="grid sm:grid-cols-3 gap-2 mb-2">
+      <select id="q_correct" class="rounded-lg px-3 py-2 text-xs"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      <input id="q_exp" type="text" placeholder="Explanation" class="rounded-lg px-3 py-2 text-xs">
+      <input id="q_solimg" type="text" placeholder="Solution photo URL/Base64 (optional)" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <button onclick="addQuestionToTest('pyq')" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">+ Add Question</button>
+  </div>
+  <div class="card2 rounded-xl p-4 mb-4">
+    <p class="text-xs font-bold muted uppercase mb-2">Bulk Uploader (JSON array)</p>
+    <textarea id="bulkJson" rows="4" placeholder='[{"textEn":"...","options":[...],"correct":"A","explanation":"..."}]' class="w-full rounded-lg px-3 py-2 text-xs font-mono"></textarea>
+    <button onclick="bulkUploadQuestions('pyq')" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold mt-2">Upload Bulk</button>
+  </div>
+  <p class="text-xs font-bold muted uppercase mb-2">Questions (${test.questions.length})</p>
+  <div class="space-y-2">
+    ${test.questions.map((q,i)=>`
+      <div class="card rounded-lg p-3 flex justify-between items-start gap-3">
+        <div><p class="text-xs font-medium">${i+1}. ${q.textEn}</p><p class="text-[10px] muted mt-1">Correct: ${q.correct}</p></div>
+        <div class="flex gap-2 shrink-0"><button onclick="editQuestion('pyq','${q.id}')" class="text-amber-400"><i data-lucide="pencil" class="w-4 h-4"></i></button><button onclick="deleteQuestion('pyq','${q.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>
+      </div>`).join('')}
+  </div>`:'<p class="muted text-sm">No PYQ sets yet — create one above.</p>'}`;
+}
+function addNewPyqSet(){
+  const title = prompt('PYQ Set title (e.g. "WBP Constable PYQ 2025"):'); if(!title) return;
+  const examCategory = prompt('Exam category:', DB.examCategories[0]||'WBP Constable') || DB.examCategories[0];
+  const year = prompt('Year (e.g. 2025):', '2025') || '2025';
+  const nt = {id:uid('pyq'), title, examCategory, year, durationMin:30, marksCorrect:1, marksWrong:0.25, questions:[]};
+  DB.pyqSets.push(nt); pyqAdminId=nt.id; saveDB(); renderAdminBody();
+}
+function editPyqMeta(){
+  const test = DB.pyqSets.find(t=>t.id===pyqAdminId); if(!test) return;
+  const title = prompt('Title:', test.title); if(title===null) return;
+  const examCategory = prompt('Exam Category:', test.examCategory); if(examCategory===null) return;
+  const year = prompt('Year:', test.year); if(year===null) return;
+  const dur = prompt('Duration (min):', test.durationMin); if(dur===null) return;
+  const mw = prompt('Negative marking:', test.marksWrong); if(mw===null) return;
+  test.title=title; test.examCategory=examCategory; test.year=year; test.durationMin=parseFloat(dur)||test.durationMin; test.marksWrong=parseFloat(mw)>=0?parseFloat(mw):test.marksWrong;
+  saveDB(); renderAdminBody();
+}
+function addExamCategory(){ const c = prompt('New exam category name:'); if(!c) return; if(!DB.examCategories.includes(c)){ DB.examCategories.push(c); saveDB(); renderAdminBody(); } }
+function removeExamCategory(c){ if(!confirm('Remove category "'+c+'"?')) return; DB.examCategories = DB.examCategories.filter(x=>x!==c); saveDB(); renderAdminBody(); }
+
+/* --- GK Quiz Uploader (dedicated, tags quizPool subject='gk') --- */
+function adminGkQuizView(){
+  return `
+  <div class="card2 rounded-xl p-4 mb-4">
+    <p class="text-xs font-bold muted uppercase mb-2">Upload Quiz Questions (GK Only) — Single Entry</p>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <textarea id="gk_en" rows="2" placeholder="Question (English)" class="rounded-lg px-3 py-2 text-xs"></textarea>
+      <textarea id="gk_bn" rows="2" placeholder="প্রশ্ন (বাংলা) — optional" class="rounded-lg px-3 py-2 text-xs bn"></textarea>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <input id="gk_a" type="text" placeholder="Option A" class="rounded-lg px-3 py-2 text-xs"><input id="gk_b" type="text" placeholder="Option B" class="rounded-lg px-3 py-2 text-xs">
+      <input id="gk_c" type="text" placeholder="Option C" class="rounded-lg px-3 py-2 text-xs"><input id="gk_d" type="text" placeholder="Option D" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <select id="gk_correct" class="rounded-lg px-3 py-2 text-xs"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      <input id="gk_exp" type="text" placeholder="Explanation" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <button onclick="addGkQuizQuestion()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">+ Add to GK Quiz Pool</button>
+  </div>
+  <div class="card2 rounded-xl p-4 mb-4">
+    <p class="text-xs font-bold muted uppercase mb-2">Bulk Copy-Paste Upload (JSON array, tag-free — always saved as GK)</p>
+    <textarea id="gkBulkJson" rows="4" placeholder='[{"textEn":"...","options":[{"key":"A","textEn":"..."},...],"correct":"A","explanation":"..."}]' class="w-full rounded-lg px-3 py-2 text-xs font-mono"></textarea>
+    <button onclick="bulkUploadGkQuiz()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold mt-2">Upload Bulk to GK Quiz Pool</button>
+  </div>
+  <p class="text-xs font-bold muted uppercase mb-2">GK Quiz Pool (${DB.quizPool.filter(q=>q.subject==='gk').length} questions)</p>
+  <div class="space-y-2">
+    ${DB.quizPool.filter(q=>q.subject==='gk').map((q,i)=>`
+      <div class="card rounded-lg p-3 flex justify-between items-start gap-3">
+        <div><p class="text-xs font-medium">${i+1}. ${q.textEn}</p><p class="text-[10px] muted mt-1">Correct: ${q.correct}</p></div>
+        <button onclick="deleteGkQuizQuestion('${q.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      </div>`).join('')}
+  </div>`;
+}
+function addGkQuizQuestion(){
+  const en=document.getElementById('gk_en').value.trim(), bn=document.getElementById('gk_bn').value.trim();
+  const a=document.getElementById('gk_a').value.trim(), b=document.getElementById('gk_b').value.trim(), c=document.getElementById('gk_c').value.trim(), d=document.getElementById('gk_d').value.trim();
+  const correct=document.getElementById('gk_correct').value, exp=document.getElementById('gk_exp').value.trim();
+  if(!en||!a||!b||!c||!d){ alert('Please fill the question and all 4 options.'); return; }
+  DB.quizPool.push({id:uid('q'), subject:'gk', textEn:en, textBn:bn, options:[{key:'A',textEn:a,textBn:''},{key:'B',textEn:b,textBn:''},{key:'C',textEn:c,textBn:''},{key:'D',textEn:d,textBn:''}], correct, explanation:exp, solutionImg:''});
+  saveDB(); renderAdminBody();
+}
+function bulkUploadGkQuiz(){
+  const raw = document.getElementById('gkBulkJson').value.trim();
+  try{
+    const arr = JSON.parse(raw);
+    arr.forEach(q=>{ DB.quizPool.push({id:uid('q'), subject:'gk', textEn:q.textEn||'', textBn:q.textBn||'', options:q.options||[], correct:q.correct||'A', explanation:q.explanation||'', solutionImg:q.solutionImg||''}); });
+    saveDB(); renderAdminBody();
+  }catch(e){ alert('Invalid JSON: '+e.message); }
+}
+function deleteGkQuizQuestion(qid){ if(!confirm('Delete this GK question?')) return; DB.quizPool = DB.quizPool.filter(q=>q.id!==qid); saveDB(); renderAdminBody(); }
+
+/* --- Materials (5 categories incl. Current Affairs) --- */
+function adminMaterialsView(){
+  const cats=[['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['currentAffairs','Current Affairs']];
+  return `
+  <div class="grid sm:grid-cols-2 gap-4">
+    ${cats.map(c=>`
+      <div class="card2 rounded-xl p-4">
+        <p class="text-xs font-bold muted uppercase mb-2">${c[1]}</p>
+        <div class="space-y-1 mb-3">
+          ${(DB.materials[c[0]]||[]).map(m=>`<div class="flex justify-between items-center text-xs card rounded-md px-2 py-1.5"><span>${m.title} <span class="muted">(${m.views||0} views)</span></span><button onclick="deleteMaterial('${c[0]}','${m.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('') || '<p class="text-[11px] muted">None yet</p>'}
+        </div>
+        <div class="flex gap-2"><input id="mat_title_${c[0]}" type="text" placeholder="Material title" class="flex-1 rounded-lg px-2 py-1.5 text-xs"><button onclick="addMaterial('${c[0]}')" class="btn-gold rounded-lg px-3 py-1.5 text-xs font-bold">Add</button></div>
+      </div>`).join('')}
+  </div>`;
+}
+function addMaterial(cat){ const input = document.getElementById('mat_title_'+cat); const title = input.value.trim(); if(!title) return; DB.materials[cat].push({id:uid('mat'), title, url:'', views:0}); saveDB(); renderAdminBody(); }
+function deleteMaterial(cat,id){ DB.materials[cat]=DB.materials[cat].filter(m=>m.id!==id); saveDB(); renderAdminBody(); }
+
+/* --- Batch Manager --- */
+function adminBatchesView(){
+  return `
+  <div class="space-y-3 mb-4">
+    ${DB.batches.map(b=>`
+      <div class="card2 rounded-xl p-4">
+        <div class="flex justify-between items-start mb-2">
+          <div><p class="font-semibold text-sm">${b.name}</p><p class="text-xs gold-text font-bold">${priceLabel(b.price)}</p><p class="text-[10px] muted mt-0.5">${b.examCategory||'All Exams'}</p></div>
+          <span class="badge ${b.active?'bg-emerald-500/20 text-emerald-400':'bg-gray-500/20 muted'}">${b.active?'Active':'Archived'}</span>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="editBatch('${b.id}')" class="btn-ghost rounded-lg px-3 py-1.5 text-[11px] font-bold">Edit</button>
+          <button onclick="toggleBatchActive('${b.id}')" class="btn-ghost rounded-lg px-3 py-1.5 text-[11px] font-bold">${b.active?'Archive':'Reactivate'}</button>
+          <button onclick="deleteBatch('${b.id}')" class="rounded-lg px-3 py-1.5 text-[11px] font-bold bg-red-600 text-white">Delete</button>
+        </div>
+      </div>`).join('')}
+  </div>
+  <button onclick="addBatch()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">+ Add New Batch</button>`;
+}
+function addBatch(){
+  const name = prompt('Batch name (e.g. "SSC GD Special"):'); if(!name) return;
+  const examCategory = prompt('Exam category tag (e.g. "WBP Constable", "Railway (RRB)", "SSC GD"):', 'All Exams') || 'All Exams';
+  // Pricing is standardized across the portal at ₹300 / Month for every batch.
+  DB.batches.push({id:uid('bt'), name, price:300, active:true, examCategory, features:['Full access to batch resources'], timetable:[['Mon-Fri','Regular Classes']]});
+  saveDB(); renderAdminBody();
+}
+function editBatch(id){
+  const b = DB.batches.find(x=>x.id===id); if(!b) return;
+  const name = prompt('Batch name:', b.name); if(name===null) return;
+  const examCategory = prompt('Exam category tag:', b.examCategory||'All Exams'); if(examCategory===null) return;
+  // Pricing is fixed portal-wide at ₹300 / Month and is not editable per-batch.
+  b.name = name; b.price = 300; b.examCategory = examCategory.trim()||b.examCategory;
+  saveDB(); renderAdminBody();
+}
+function toggleBatchActive(id){ const b=DB.batches.find(x=>x.id===id); if(b){ b.active=!b.active; saveDB(); renderAdminBody(); } }
+function deleteBatch(id){ if(!confirm('Delete this batch permanently?')) return; DB.batches=DB.batches.filter(b=>b.id!==id); saveDB(); renderAdminBody(); }
+
+/* --- Mentor Manager --- */
+function adminMentorsView(){
+  return `
+  <div class="space-y-3 mb-4">
+    ${DB.mentors.map(m=>`
+      <div class="card2 rounded-xl p-4 flex items-center gap-4">
+        ${m.photo?`<img src="${m.photo}" class="w-12 h-12 rounded-full object-cover">`:`<div class="w-12 h-12 rounded-full gold-grad flex items-center justify-center font-bold text-ink">${m.name[0]}</div>`}
+        <div class="flex-1"><p class="font-semibold text-sm">${m.name}</p><p class="text-xs muted">${m.subject} • +${m.phone}</p></div>
+        <div class="flex gap-2"><button onclick="editMentor('${m.id}')" class="btn-ghost rounded-lg px-3 py-1.5 text-[11px] font-bold">Edit</button><button onclick="deleteMentor('${m.id}')" class="rounded-lg px-3 py-1.5 text-[11px] font-bold bg-red-600 text-white">Delete</button></div>
+      </div>`).join('')}
+  </div>
+  <button onclick="addMentor()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">+ Add New Mentor</button>`;
+}
+function addMentor(){
+  const name = prompt('Mentor full name:'); if(!name) return;
+  const subject = prompt('Designation / Subject taught:','') || '';
+  const phone = prompt('WhatsApp number (with country code, no + or spaces, e.g. 91XXXXXXXXXX):','') || '';
+  const photo = prompt('Photo URL or Base64 (optional, leave blank for initials avatar):','') || '';
+  DB.mentors.push({id:uid('mn'), name, subject, phone, photo}); saveDB(); renderAdminBody();
+}
+function editMentor(id){
+  const m = DB.mentors.find(x=>x.id===id); if(!m) return;
+  const name = prompt('Name:', m.name); if(name===null) return;
+  const subject = prompt('Subject:', m.subject); if(subject===null) return;
+  const phone = prompt('WhatsApp number:', m.phone); if(phone===null) return;
+  const photo = prompt('Photo URL/Base64 (blank to clear):', m.photo); if(photo===null) return;
+  m.name=name; m.subject=subject; m.phone=phone; m.photo=photo;
+  saveDB(); renderAdminBody();
+}
+function deleteMentor(id){ if(!confirm('Delete this mentor?')) return; DB.mentors = DB.mentors.filter(m=>m.id!==id); saveDB(); renderAdminBody(); }
+
+/* --- Content: Banners/Ticker/Notices --- */
+function adminContentView(){
+  return `
+  <div class="mb-6">
+    <p class="text-xs font-bold muted uppercase mb-2">Announcement Ticker</p>
+    <textarea id="tickerEdit" rows="2" class="w-full rounded-lg px-3 py-2 text-xs mb-2">${DB.ticker}</textarea>
+    <button onclick="saveTicker()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">Save Ticker</button>
+  </div>
+  <div>
+    <p class="text-xs font-bold muted uppercase mb-2">Hero Banners</p>
+    <div class="space-y-2">
+      ${DB.banners.map((b,i)=>`
+        <div class="card2 rounded-lg p-3 grid sm:grid-cols-3 gap-2">
+          <input value="${b.title}" onchange="DB.banners[${i}].title=this.value;saveDB()" class="rounded-lg px-2 py-1.5 text-xs" placeholder="Title">
+          <input value="${b.subtitle}" onchange="DB.banners[${i}].subtitle=this.value;saveDB()" class="rounded-lg px-2 py-1.5 text-xs" placeholder="Subtitle">
+          <input value="${b.tag}" onchange="DB.banners[${i}].tag=this.value;saveDB()" class="rounded-lg px-2 py-1.5 text-xs" placeholder="Tag">
+        </div>`).join('')}
+    </div>
+  </div>
+  <div class="mt-6">
+    <p class="text-xs font-bold muted uppercase mb-2">Notices</p>
+    <div class="flex gap-2 mb-2"><input id="notice_title" placeholder="Notice title" class="flex-1 rounded-lg px-3 py-2 text-xs"><button onclick="addNotice()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">Add</button></div>
+    <div class="space-y-1">${DB.notices.map(n=>`<div class="flex justify-between items-center text-xs card rounded-md px-2 py-1.5"><span>${n.title}</span><button onclick="deleteNotice('${n.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('')}</div>
+  </div>`;
+}
+function saveTicker(){ DB.ticker = document.getElementById('tickerEdit').value; saveDB(); renderTicker(); }
+function addNotice(){ const title = document.getElementById('notice_title').value.trim(); if(!title) return; DB.notices.push({id:uid('nt'), title, date:new Date().toISOString().slice(0,10), body:''}); saveDB(); renderAdminBody(); }
+function deleteNotice(id){ DB.notices = DB.notices.filter(n=>n.id!==id); saveDB(); renderAdminBody(); }
+
+/* --- Settings: Change Password + Backup/Restore --- */
+function adminSettingsView(){
+  return `
+  <div class="card2 rounded-xl p-4 mb-6">
+    <p class="text-xs font-bold muted uppercase mb-3">Change Admin Password</p>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <input id="newAdmPw" type="password" placeholder="New Password" class="rounded-lg px-3 py-2 text-xs">
+      <input id="confirmAdmPw" type="password" placeholder="Confirm New Password" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <button onclick="changeAdminPasswordHandler()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">Update Password</button>
+    <p class="text-[11px] muted mt-2">Current login email stays fixed: ${ADMIN_EMAIL}</p>
+  </div>
+  <div class="card2 rounded-xl p-4">
+    <p class="text-xs font-bold muted uppercase mb-3">Data Protection</p>
+    <div class="flex flex-wrap gap-2 items-center">
+      <button onclick="exportBackup()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold flex items-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5"></i>Export All Data (Backup JSON)</button>
+      <label class="btn-ghost rounded-lg px-4 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+        <i data-lucide="upload" class="w-3.5 h-3.5"></i>Import Data (Restore JSON)
+        <input type="file" accept="application/json" class="hidden" onchange="importBackup(this.files[0])">
+      </label>
+    </div>
+    <p class="text-[11px] muted mt-2">Importing will overwrite all current data after confirmation.</p>
+  </div>`;
+}
+function changeAdminPasswordHandler(){
+  const pw1 = document.getElementById('newAdmPw').value;
+  const pw2 = document.getElementById('confirmAdmPw').value;
+  if(!pw1 || pw1.length<6){ alert('Password must be at least 6 characters.'); return; }
+  if(pw1!==pw2){ alert('Passwords do not match.'); return; }
+  setAdminPassword(pw1.trim());
+  alert('Admin password updated successfully.');
+  document.getElementById('newAdmPw').value=''; document.getElementById('confirmAdmPw').value='';
+}
+function exportBackup(){
+  const blob = new Blob([JSON.stringify(DB, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'TCE_Backup_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+}
+function importBackup(file){
+  if(!file) return;
+  if(!confirm('This will overwrite ALL current data with the imported backup. Continue?')) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      DB = data; saveDB();
+      alert('Data restored successfully.');
+      renderAdminBody(); renderHero(); renderTicker(); renderMentors();
+    }catch(err){ alert('Invalid backup file: '+err.message); }
+  };
+  reader.readAsText(file);
+}
+
+/* =========================================================================
+   INIT
+========================================================================= */
+function init(){
+  renderNav();
+  renderHero(); startHeroAuto();
+  renderTicker();
+  renderMentors();
+  renderTab();
+  lucide.createIcons();
+}
+init();
+</script>
+</body>
+</html>
