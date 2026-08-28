@@ -7,6 +7,14 @@
 <meta name="description" content="TCE - The Competitive Edge: WBP, KP SI, SSC GD Constable coaching with CBT mock tests, PYQs, quizzes, study materials and live batches.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%23F59E0B%22>T</text></svg>">
 
+<!-- PWA: Web App Manifest + theme/meta tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0B0B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TCE">
+<link rel="apple-touch-icon" href="logo.png">
+
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -111,22 +119,10 @@
 </head>
 <body class="no-tap-highlight">
 
-<!-- =============== TOP INFO BAR =============== -->
-<div class="hidden sm:block text-[11px] card2" style="border-bottom:1px solid var(--border);">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-1.5 flex flex-wrap items-center justify-between gap-2 muted">
-    <p class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3 h-3 gold-text shrink-0"></i> Near Nahata Anchal, Nahata, P.S. Gopalnagar, North 24 Parganas, West Bengal, PIN - 743290</p>
-    <p class="flex items-center gap-4">
-      <span class="flex items-center gap-1"><i data-lucide="globe" class="w-3 h-3 gold-text"></i> Tcenahata.in</span>
-      <span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3 gold-text"></i> +91 73846 44030</span>
-      <span class="flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3 gold-text"></i> tcenahata@gmail.com</span>
-    </p>
-  </div>
-</div>
-
 <!-- =============== NAVBAR =============== -->
 <header class="sticky top-0 z-40 backdrop-blur-md" style="background:color-mix(in srgb, var(--bg) 88%, transparent); border-bottom:1px solid var(--border);">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-    <div class="flex items-center gap-2 cursor-pointer" onclick="goHome()">
+  <div class="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between h-16 gap-2">
+    <div class="flex items-center gap-2 cursor-pointer shrink-0 min-w-0" onclick="goHome()">
       <div class="relative w-9 h-9 shrink-0">
         <div id="logoFallback" class="w-9 h-9 rounded-lg gold-grad flex items-center justify-center font-display font-800 text-ink text-lg">T</div>
         <img src="logo.png" alt="TCE Logo" id="logoImg"
@@ -134,27 +130,27 @@
              onload="document.getElementById('logoFallback').classList.add('hidden');this.classList.remove('hidden');"
              onerror="this.classList.add('hidden');document.getElementById('logoFallback').classList.remove('hidden');">
       </div>
-      <div class="leading-tight">
-        <div class="font-display font-800 text-sm sm:text-base">TCE <span class="gold-text">The Competitive Edge</span></div>
-        <div class="text-[10px] muted hidden sm:block">Tcenahata.in — Target Your Dream Govt Job</div>
+      <div class="leading-tight min-w-0">
+        <div class="font-display font-800 text-xs sm:text-sm lg:text-base whitespace-nowrap">TCE <span class="gold-text">The Competitive Edge</span></div>
+        <div class="text-[10px] muted hidden md:block whitespace-nowrap">Tcenahata.in — Target Your Dream Govt Job</div>
       </div>
     </div>
 
-    <nav class="hidden lg:flex items-center gap-1" id="navTabsDesktop"></nav>
+    <nav class="hidden xl:flex items-center gap-0.5 flex-1 justify-center overflow-x-auto hide-scrollbar" id="navTabsDesktop"></nav>
 
-    <div class="flex items-center gap-2">
-      <button onclick="toggleTheme()" class="w-9 h-9 rounded-full btn-ghost flex items-center justify-center" title="Toggle theme">
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <button onclick="toggleTheme()" class="w-9 h-9 rounded-full btn-ghost flex items-center justify-center shrink-0" title="Toggle theme">
         <i data-lucide="sun-moon" class="w-4 h-4"></i>
       </button>
-      <button onclick="openLoginModal()" id="navAuthBtn" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg btn-gold text-xs">
+      <button onclick="openLoginModal()" id="navAuthBtn" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg btn-gold text-xs shrink-0 whitespace-nowrap">
         <i data-lucide="user" class="w-3.5 h-3.5"></i> Student Login
       </button>
-      <button onclick="toggleMobileMenu()" class="lg:hidden w-9 h-9 rounded-full btn-ghost flex items-center justify-center">
+      <button onclick="toggleMobileMenu()" class="xl:hidden w-9 h-9 rounded-full btn-ghost flex items-center justify-center shrink-0">
         <i data-lucide="menu" class="w-4 h-4"></i>
       </button>
     </div>
   </div>
-  <div id="mobileMenu" class="hidden lg:hidden px-4 pb-3 flex flex-col gap-1" style="border-top:1px solid var(--border);"></div>
+  <div id="mobileMenu" class="hidden xl:hidden px-4 pb-3 flex flex-col gap-1" style="border-top:1px solid var(--border);"></div>
 </header>
 
 <!-- =============== TICKER =============== -->
@@ -222,12 +218,17 @@
   <div class="text-center text-xs muted pb-6">© 2026 TCE - The Competitive Edge. All rights reserved.</div>
 </footer>
 
+<!-- =============== GLOBAL BACK BUTTON =============== -->
+<button id="globalBackBtn" onclick="history.back()" class="hidden fixed top-[80px] left-4 z-[70] w-11 h-11 rounded-full card2 btn-ghost items-center justify-center shadow-lg" title="Back" aria-label="Go back">
+  <i data-lucide="arrow-left" class="w-5 h-5"></i>
+</button>
+
 <!-- =============== FLOATING ACTION BUTTONS =============== -->
 <div class="fixed bottom-5 right-5 z-40 flex flex-col gap-3">
   <button id="installBtn" onclick="triggerInstall()" class="hidden items-center gap-2 px-4 py-3 rounded-full btn-gold shadow-lg text-xs font-bold">
     <i data-lucide="download" class="w-4 h-4"></i> 📲 Install App
   </button>
-  <a href="https://wa.me/917384644030?text=Hello%20Sir%2C%20I%20want%20to%20know%20more%20about%20TCE%20batches" target="_blank"
+  <a href="https://wa.me/919749587349?text=Hello%20Sir%2C%20I%20want%20to%20know%20more%20about%20TCE%20batches" target="_blank"
      class="flex items-center gap-2 px-4 py-3 rounded-full bg-[#25D366] text-white shadow-lg text-xs font-bold">
     <i data-lucide="message-circle" class="w-4 h-4"></i> WhatsApp Support
   </a>
@@ -256,8 +257,8 @@ if(!DEMO_MODE){
 ========================================================================= */
 const ADMIN_EMAIL = "nhkprakash02@gmail.com";
 const ADMIN_PASSWORD_DEFAULT = "A@a123456";
-function getAdminPassword(){ return localStorage.getItem('tce_admin_pw_override') || ADMIN_PASSWORD_DEFAULT; }
-function setAdminPassword(pw){ localStorage.setItem('tce_admin_pw_override', pw); }
+// Admin credentials are fixed and not editable from within the app (no in-app password change UI).
+function getAdminPassword(){ return ADMIN_PASSWORD_DEFAULT; }
 
 /* =========================================================================
    LOCAL "DATABASE"
@@ -382,7 +383,7 @@ function seedDB(){
         timetable:[["Mon / Wed / Fri","Math & GK"],["Tue / Thu","Reasoning & General Science"],["Sunday","Full Mock Test"]]}
     ],
     mentors: [
-      {id:uid('mn'), name:"Tanujoy Mallick", subject:"GK & GS", phone:"919749587349", photo:""},
+      {id:uid('mn'), name:"Tanujoy Mallick", subject:"General Studies", phone:"919749587349", photo:""},
       {id:uid('mn'), name:"Prakash Sarkar", subject:"Mathematics", phone:"917384644030", photo:""},
       {id:uid('mn'), name:"Maharup Tarafder", subject:"General Science, Static GK & Current Affairs", phone:"918327416813", photo:""},
       {id:uid('mn'), name:"Pranab Sadhukhan", subject:"Reasoning & English", phone:"917407879095", photo:""}
@@ -401,6 +402,7 @@ function normalizeDB(db){
     db.examCategories = db.examCategories.filter(c=>c!=="Railway");
     if(!db.examCategories.includes("Railway (RRB)")) db.examCategories.push("Railway (RRB)");
   }
+  (db.mentors||[]).forEach(m=>{ if(m.name==="Tanujoy Mallick"){ m.subject="General Studies"; delete m.nameBn; } });
   return db;
 }
 function loadDB(){
@@ -461,7 +463,15 @@ function renderNav(){
 }
 function toggleMobileMenu(){ document.getElementById('mobileMenu').classList.toggle('hidden'); }
 function goHome(){ setTab('home'); }
-function setTab(id){ activeTab=id; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'}); }
+function setTab(id){
+  activeTab=id; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'});
+  history.pushState({tab:id}, '', '#'+id);
+  updateBackButtonVisibility();
+}
+function setTabFromHistory(id){
+  activeTab=id; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'});
+  updateBackButtonVisibility();
+}
 
 /* =========================================================================
    THEME TOGGLE
@@ -520,13 +530,37 @@ function renderMentors(){
 ========================================================================= */
 function openModal(html){
   document.getElementById('modalRoot').innerHTML = `<div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-3" onclick="if(event.target===this)closeModal()"><div class="w-full max-w-lg fade-in">${html}</div></div>`;
+  history.pushState({modal:true, tab:activeTab}, '', location.hash||('#'+activeTab));
+  updateBackButtonVisibility();
   lucide.createIcons();
 }
 function openModalWide(html){
   document.getElementById('modalRoot').innerHTML = `<div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-3" onclick="if(event.target===this)closeModal()"><div class="w-full max-w-4xl fade-in max-h-[92vh] overflow-y-auto rounded-2xl">${html}</div></div>`;
+  history.pushState({modal:true, tab:activeTab}, '', location.hash||('#'+activeTab));
+  updateBackButtonVisibility();
   lucide.createIcons();
 }
-function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; updateBackButtonVisibility(); }
+
+/* =========================================================================
+   GLOBAL BACK BUTTON & BROWSER HISTORY NAVIGATION
+========================================================================= */
+function updateBackButtonVisibility(){
+  const modalOpen = document.getElementById('modalRoot').innerHTML.trim().length>0;
+  const show = modalOpen || activeTab!=='home';
+  const btn = document.getElementById('globalBackBtn');
+  if(!btn) return;
+  if(show){ btn.classList.remove('hidden'); btn.classList.add('flex'); }
+  else{ btn.classList.add('hidden'); btn.classList.remove('flex'); }
+}
+window.addEventListener('popstate', (e)=>{
+  // Any screen we navigated "into" (a tab, a modal, an exam, admin panel, etc.) gets undone by one browser-back step.
+  document.getElementById('modalRoot').innerHTML='';
+  if(examState){ clearInterval(examState.timer); detachAntiCheat(); examState=null; if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
+  const st = e.state;
+  const tab = (st && st.tab) ? st.tab : 'home';
+  setTabFromHistory(tab);
+});
 
 /* =========================================================================
    AUTH
@@ -893,6 +927,8 @@ function startMockTest(testId, subject){ showPreExamInstructions(testId,'mock',s
 function renderExamScreen(){
   const st = examState;
   const hasBn = st.questions.some(qq=>qq.textBn && qq.textBn.trim().length>0);
+  history.pushState({modal:true, tab:activeTab, exam:true}, '', location.hash||('#'+activeTab));
+  updateBackButtonVisibility();
   document.getElementById('modalRoot').innerHTML = `
   <div class="fixed inset-0 z-50 bg-[var(--bg)] flex flex-col" id="examRoot">
     <div class="flex items-center justify-between px-4 py-3 card2" style="border-bottom:1px solid var(--border)">
@@ -1074,6 +1110,8 @@ function renderResultScreen(sub, autoTimeout, autoViolation){
     .reduce((acc,s)=>{ const ex=acc.find(a=>a.studentId===s.studentId); if(!ex||s.score>ex.score){ acc=acc.filter(a=>a.studentId!==s.studentId); acc.push(s); } return acc; },[])
     .sort((a,b)=>b.score-a.score);
   const rank = leaderboard.findIndex(s=>s.id===sub.id)+1;
+  history.pushState({modal:true, tab:activeTab, exam:true}, '', location.hash||('#'+activeTab));
+  updateBackButtonVisibility();
   document.getElementById('modalRoot').innerHTML = `
   <div class="fixed inset-0 z-50 bg-[var(--bg)] overflow-y-auto">
     <div class="max-w-3xl mx-auto px-4 py-10">
@@ -1260,17 +1298,49 @@ function initMaterialsTab(){
     </div>`).join('') : '<p class="muted text-sm col-span-full">No materials uploaded yet in this category.</p>';
   lucide.createIcons();
 }
-async function buildWatermarkedPdfBytes(title){
+async function loadPdfBytesFromMaterial(mat){
+  if(!mat || !mat.url) return null;
+  try{
+    if(mat.url.startsWith('data:')){
+      const base64 = mat.url.split(',')[1];
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+    const res = await fetch(mat.url);
+    return new Uint8Array(await res.arrayBuffer());
+  }catch(e){ console.warn('Could not load material source PDF, falling back to placeholder.', e); return null; }
+}
+async function buildWatermarkedPdfBytes(mat){
+  const title = typeof mat === 'string' ? mat : mat.title;
+  const matObj = typeof mat === 'string' ? {title, url:''} : mat;
   const user = getCurrentUser();
   const { PDFDocument, rgb, degrees, StandardFonts } = PDFLib;
+  const licenseText = `Licensed to: ${user?user.name:'Guest'} | ${user?(user.phone||user.email):''} — TCE - The Competitive Edge`;
+  const sourceBytes = await loadPdfBytesFromMaterial(matObj);
+
+  if(sourceBytes){
+    try{
+      const pdfDoc = await PDFDocument.load(sourceBytes);
+      const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      pdfDoc.getPages().forEach(page=>{
+        const { width, height } = page.getSize();
+        page.drawText('TCE', {x:width/2-90, y:height/2-40, size:Math.min(width,height)*0.28, font, color:rgb(0.6,0.6,0.6), opacity:0.09, rotate:degrees(35)});
+        page.drawText(licenseText, {x:20, y:14, size:8, font, color:rgb(0.55,0.55,0.55), opacity:0.85});
+      });
+      return await pdfDoc.save();
+    }catch(e){ console.warn('Uploaded file could not be parsed as PDF, using placeholder instead.', e); }
+  }
+
+  // Fallback placeholder (used when no PDF has been uploaded for this material yet)
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const page = pdfDoc.addPage([595,842]);
   page.drawText('TCE - The Competitive Edge', {x:50,y:780,size:20,font,color:rgb(0.83,0.55,0.05)});
   page.drawText(title, {x:50,y:745,size:14,font,color:rgb(0.1,0.1,0.1)});
-  page.drawText('Sample study material content goes here. Replace with real PDF via Admin Panel.', {x:50,y:700,size:10,font,color:rgb(0.4,0.4,0.4)});
+  page.drawText('No PDF has been uploaded for this material yet. Upload one via the Admin Panel.', {x:50,y:700,size:10,font,color:rgb(0.4,0.4,0.4)});
   page.drawText('TCE', {x:180,y:420,size:90,font,color:rgb(0.9,0.9,0.9),opacity:0.08,rotate:degrees(30)});
-  const licenseText = `Licensed to: ${user?user.name:'Guest'} | ${user?(user.phone||user.email):''}`;
   page.drawText(licenseText, {x:50,y:30,size:9,font,color:rgb(0.6,0.6,0.6)});
   return await pdfDoc.save();
 }
@@ -1283,21 +1353,24 @@ async function previewMaterial(id, cat){
   const user = getCurrentUser();
   if(!user){ alert('Please login to view watermarked materials.'); openLoginModal(); return; }
   incrementMaterialView(id, cat);
-  const bytes = await buildWatermarkedPdfBytes(mat.title);
+  const bytes = await buildWatermarkedPdfBytes(mat);
   const blob = new Blob([bytes], {type:'application/pdf'});
   const url = URL.createObjectURL(blob);
   openModalWide(`
     <div class="card p-4">
       <div class="flex justify-between items-center mb-3"><h3 class="font-display font-700 text-sm">${mat.title} — Preview</h3><button onclick="closeModal();initMaterialsTab()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
       <iframe src="${url}" class="w-full h-[70vh] rounded-lg" style="border:1px solid var(--border)"></iframe>
-      <p class="text-[11px] muted mt-2">Licensed to ${user.name} — unauthorized redistribution is prohibited.</p>
+      <div class="flex items-center justify-between mt-3 gap-2 flex-wrap">
+        <p class="text-[11px] muted">Licensed to ${user.name} — unauthorized redistribution is prohibited.</p>
+        <button onclick="downloadMaterial('${id}','${cat}')" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold flex items-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5"></i>Download PDF</button>
+      </div>
     </div>`);
 }
 async function downloadMaterial(id, cat){
   const mat = (DB.materials[cat]||[]).find(m=>m.id===id);
   const user = getCurrentUser();
   if(!user){ alert('Please login to download watermarked materials.'); openLoginModal(); return; }
-  const bytes = await buildWatermarkedPdfBytes(mat.title);
+  const bytes = await buildWatermarkedPdfBytes(mat);
   const blob = new Blob([bytes], {type:'application/pdf'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = mat.title.replace(/\s+/g,'_')+'_TCE.pdf'; a.click();
 }
@@ -1430,7 +1503,7 @@ function submitInquiry(){
 }
 
 /* =========================================================================
-   PWA INSTALL PROMPT
+   PWA INSTALL PROMPT + SERVICE WORKER
 ========================================================================= */
 let deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', (e)=>{
@@ -1440,7 +1513,19 @@ window.addEventListener('beforeinstallprompt', (e)=>{
 function triggerInstall(){
   if(!deferredInstallPrompt){ alert('App install is available once your browser detects PWA eligibility (visit over HTTPS).'); return; }
   deferredInstallPrompt.prompt();
-  deferredInstallPrompt.userChoice.finally(()=>{ deferredInstallPrompt=null; document.getElementById('installBtn').classList.add('hidden'); });
+  deferredInstallPrompt.userChoice.finally(()=>{
+    deferredInstallPrompt=null;
+    const btn = document.getElementById('installBtn'); btn.classList.add('hidden'); btn.classList.remove('flex');
+  });
+}
+window.addEventListener('appinstalled', ()=>{
+  deferredInstallPrompt = null;
+  const btn = document.getElementById('installBtn'); if(btn){ btn.classList.add('hidden'); btn.classList.remove('flex'); }
+});
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.warn('Service worker registration failed:', err));
+  });
 }
 
 
@@ -1488,7 +1573,7 @@ function openAdminPanel(){
         <div class="flex gap-2"><button onclick="adminLogout()" class="btn-ghost rounded-md px-3 py-1.5 text-xs font-bold">Logout</button><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
       </div>
       <div class="flex gap-1 px-5 pt-3 overflow-x-auto hide-scrollbar">
-        ${[['students','Students'],['results','Mock Results'],['questions','Mock/PYQ Manager'],['pyq','PYQ Uploader'],['gkquiz','GK Quiz Uploader'],['materials','Materials'],['batches','Batches'],['mentors','Mentors'],['content','Banners/Ticker'],['settings','Settings']].map(t=>`
+        ${[['students','Students'],['results','Mock Results'],['questions','Mock/PYQ Manager'],['pyq','PYQ Uploader'],['gkquiz','GK Quiz Uploader'],['materials','Materials'],['batches','Batches'],['content','Notices'],['settings','Settings']].map(t=>`
           <button onclick="adminTab='${t[0]}';renderAdminBody()" id="adt_${t[0]}" class="px-3 py-2 rounded-t-lg text-xs font-bold whitespace-nowrap ${adminTab===t[0]?'tab-active':'muted'}">${t[1]}</button>`).join('')}
       </div>
       <div id="adminBody" class="p-5 max-h-[65vh] overflow-y-auto"></div>
@@ -1506,7 +1591,6 @@ function renderAdminBody(){
   else if(adminTab==='gkquiz') body.innerHTML = adminGkQuizView();
   else if(adminTab==='materials') body.innerHTML = adminMaterialsView();
   else if(adminTab==='batches') body.innerHTML = adminBatchesView();
-  else if(adminTab==='mentors') body.innerHTML = adminMentorsView();
   else if(adminTab==='content') body.innerHTML = adminContentView();
   else if(adminTab==='settings') body.innerHTML = adminSettingsView();
   lucide.createIcons();
@@ -1877,19 +1961,55 @@ function deleteGkQuizQuestion(qid){ if(!confirm('Delete this GK question?')) ret
 function adminMaterialsView(){
   const cats=[['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['currentAffairs','Current Affairs']];
   return `
+  <div class="card2 rounded-xl p-4 mb-6">
+    <p class="text-xs font-bold muted uppercase mb-3">Upload Study Material (PDF)</p>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <input id="newMatTitle" type="text" placeholder="Material Title" class="rounded-lg px-3 py-2 text-xs">
+      <select id="newMatCat" class="rounded-lg px-3 py-2 text-xs">${cats.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join('')}</select>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2 items-center">
+      <label class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+        <i data-lucide="file-up" class="w-3.5 h-3.5"></i><span id="newMatFileLabel">Choose PDF File</span>
+        <input id="newMatFile" type="file" accept="application/pdf" class="hidden" onchange="document.getElementById('newMatFileLabel').textContent=this.files[0]?this.files[0].name:'Choose PDF File'">
+      </label>
+      <input id="newMatUrl" type="text" placeholder="...or paste a direct PDF URL instead" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <button onclick="uploadMaterial()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold flex items-center gap-1.5"><i data-lucide="upload" class="w-3.5 h-3.5"></i>+ Upload Material</button>
+    <p class="text-[11px] muted mt-2">Upload a PDF file (stored securely as Base64) or paste a direct PDF link. Either is optional if you just want to reserve a title.</p>
+  </div>
   <div class="grid sm:grid-cols-2 gap-4">
     ${cats.map(c=>`
       <div class="card2 rounded-xl p-4">
         <p class="text-xs font-bold muted uppercase mb-2">${c[1]}</p>
-        <div class="space-y-1 mb-3">
-          ${(DB.materials[c[0]]||[]).map(m=>`<div class="flex justify-between items-center text-xs card rounded-md px-2 py-1.5"><span>${m.title} <span class="muted">(${m.views||0} views)</span></span><button onclick="deleteMaterial('${c[0]}','${m.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('') || '<p class="text-[11px] muted">None yet</p>'}
+        <div class="space-y-1">
+          ${(DB.materials[c[0]]||[]).map(m=>`<div class="flex justify-between items-center text-xs card rounded-md px-2 py-1.5"><span>${m.title} <span class="muted">(${m.views||0} views${m.url?', file attached':', no file yet'})</span></span><button onclick="deleteMaterial('${c[0]}','${m.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('') || '<p class="text-[11px] muted">None yet</p>'}
         </div>
-        <div class="flex gap-2"><input id="mat_title_${c[0]}" type="text" placeholder="Material title" class="flex-1 rounded-lg px-2 py-1.5 text-xs"><button onclick="addMaterial('${c[0]}')" class="btn-gold rounded-lg px-3 py-1.5 text-xs font-bold">Add</button></div>
       </div>`).join('')}
   </div>`;
 }
-function addMaterial(cat){ const input = document.getElementById('mat_title_'+cat); const title = input.value.trim(); if(!title) return; DB.materials[cat].push({id:uid('mat'), title, url:'', views:0}); saveDB(); renderAdminBody(); }
-function deleteMaterial(cat,id){ DB.materials[cat]=DB.materials[cat].filter(m=>m.id!==id); saveDB(); renderAdminBody(); }
+function uploadMaterial(){
+  const title = document.getElementById('newMatTitle').value.trim();
+  const cat = document.getElementById('newMatCat').value;
+  const url = document.getElementById('newMatUrl').value.trim();
+  const fileInput = document.getElementById('newMatFile');
+  const file = fileInput.files && fileInput.files[0];
+  if(!title){ alert('Please enter a material title.'); return; }
+  if(!DB.materials[cat]) DB.materials[cat] = [];
+  const finalize = (fileUrl)=>{
+    DB.materials[cat].push({id:uid('mat'), title, url: fileUrl||'', views:0});
+    saveDB(); renderAdminBody();
+  };
+  if(file){
+    if(file.type !== 'application/pdf'){ alert('Please choose a PDF file.'); return; }
+    const reader = new FileReader();
+    reader.onload = (e)=> finalize(e.target.result); // Base64 data URL
+    reader.onerror = ()=>{ alert('Could not read the selected file. Try again or paste a URL instead.'); finalize(url); };
+    reader.readAsDataURL(file);
+  } else {
+    finalize(url);
+  }
+}
+function deleteMaterial(cat,id){ if(!confirm('Delete this material permanently?')) return; DB.materials[cat]=DB.materials[cat].filter(m=>m.id!==id); saveDB(); renderAdminBody(); }
 
 /* --- Batch Manager --- */
 function adminBatchesView(){
@@ -1928,78 +2048,21 @@ function editBatch(id){
 function toggleBatchActive(id){ const b=DB.batches.find(x=>x.id===id); if(b){ b.active=!b.active; saveDB(); renderAdminBody(); } }
 function deleteBatch(id){ if(!confirm('Delete this batch permanently?')) return; DB.batches=DB.batches.filter(b=>b.id!==id); saveDB(); renderAdminBody(); }
 
-/* --- Mentor Manager --- */
-function adminMentorsView(){
-  return `
-  <div class="space-y-3 mb-4">
-    ${DB.mentors.map(m=>`
-      <div class="card2 rounded-xl p-4 flex items-center gap-4">
-        ${m.photo?`<img src="${m.photo}" class="w-12 h-12 rounded-full object-cover">`:`<div class="w-12 h-12 rounded-full gold-grad flex items-center justify-center font-bold text-ink">${m.name[0]}</div>`}
-        <div class="flex-1"><p class="font-semibold text-sm">${m.name}</p><p class="text-xs muted">${m.subject} • +${m.phone}</p></div>
-        <div class="flex gap-2"><button onclick="editMentor('${m.id}')" class="btn-ghost rounded-lg px-3 py-1.5 text-[11px] font-bold">Edit</button><button onclick="deleteMentor('${m.id}')" class="rounded-lg px-3 py-1.5 text-[11px] font-bold bg-red-600 text-white">Delete</button></div>
-      </div>`).join('')}
-  </div>
-  <button onclick="addMentor()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">+ Add New Mentor</button>`;
-}
-function addMentor(){
-  const name = prompt('Mentor full name:'); if(!name) return;
-  const subject = prompt('Designation / Subject taught:','') || '';
-  const phone = prompt('WhatsApp number (with country code, no + or spaces, e.g. 91XXXXXXXXXX):','') || '';
-  const photo = prompt('Photo URL or Base64 (optional, leave blank for initials avatar):','') || '';
-  DB.mentors.push({id:uid('mn'), name, subject, phone, photo}); saveDB(); renderAdminBody();
-}
-function editMentor(id){
-  const m = DB.mentors.find(x=>x.id===id); if(!m) return;
-  const name = prompt('Name:', m.name); if(name===null) return;
-  const subject = prompt('Subject:', m.subject); if(subject===null) return;
-  const phone = prompt('WhatsApp number:', m.phone); if(phone===null) return;
-  const photo = prompt('Photo URL/Base64 (blank to clear):', m.photo); if(photo===null) return;
-  m.name=name; m.subject=subject; m.phone=phone; m.photo=photo;
-  saveDB(); renderAdminBody();
-}
-function deleteMentor(id){ if(!confirm('Delete this mentor?')) return; DB.mentors = DB.mentors.filter(m=>m.id!==id); saveDB(); renderAdminBody(); }
-
-/* --- Content: Banners/Ticker/Notices --- */
+/* --- Content: Notices --- */
 function adminContentView(){
   return `
-  <div class="mb-6">
-    <p class="text-xs font-bold muted uppercase mb-2">Announcement Ticker</p>
-    <textarea id="tickerEdit" rows="2" class="w-full rounded-lg px-3 py-2 text-xs mb-2">${DB.ticker}</textarea>
-    <button onclick="saveTicker()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">Save Ticker</button>
-  </div>
   <div>
-    <p class="text-xs font-bold muted uppercase mb-2">Hero Banners</p>
-    <div class="space-y-2">
-      ${DB.banners.map((b,i)=>`
-        <div class="card2 rounded-lg p-3 grid sm:grid-cols-3 gap-2">
-          <input value="${b.title}" onchange="DB.banners[${i}].title=this.value;saveDB()" class="rounded-lg px-2 py-1.5 text-xs" placeholder="Title">
-          <input value="${b.subtitle}" onchange="DB.banners[${i}].subtitle=this.value;saveDB()" class="rounded-lg px-2 py-1.5 text-xs" placeholder="Subtitle">
-          <input value="${b.tag}" onchange="DB.banners[${i}].tag=this.value;saveDB()" class="rounded-lg px-2 py-1.5 text-xs" placeholder="Tag">
-        </div>`).join('')}
-    </div>
-  </div>
-  <div class="mt-6">
     <p class="text-xs font-bold muted uppercase mb-2">Notices</p>
     <div class="flex gap-2 mb-2"><input id="notice_title" placeholder="Notice title" class="flex-1 rounded-lg px-3 py-2 text-xs"><button onclick="addNotice()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">Add</button></div>
     <div class="space-y-1">${DB.notices.map(n=>`<div class="flex justify-between items-center text-xs card rounded-md px-2 py-1.5"><span>${n.title}</span><button onclick="deleteNotice('${n.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('')}</div>
   </div>`;
 }
-function saveTicker(){ DB.ticker = document.getElementById('tickerEdit').value; saveDB(); renderTicker(); }
 function addNotice(){ const title = document.getElementById('notice_title').value.trim(); if(!title) return; DB.notices.push({id:uid('nt'), title, date:new Date().toISOString().slice(0,10), body:''}); saveDB(); renderAdminBody(); }
 function deleteNotice(id){ DB.notices = DB.notices.filter(n=>n.id!==id); saveDB(); renderAdminBody(); }
 
 /* --- Settings: Change Password + Backup/Restore --- */
 function adminSettingsView(){
   return `
-  <div class="card2 rounded-xl p-4 mb-6">
-    <p class="text-xs font-bold muted uppercase mb-3">Change Admin Password</p>
-    <div class="grid sm:grid-cols-2 gap-2 mb-2">
-      <input id="newAdmPw" type="password" placeholder="New Password" class="rounded-lg px-3 py-2 text-xs">
-      <input id="confirmAdmPw" type="password" placeholder="Confirm New Password" class="rounded-lg px-3 py-2 text-xs">
-    </div>
-    <button onclick="changeAdminPasswordHandler()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">Update Password</button>
-    <p class="text-[11px] muted mt-2">Current login email stays fixed: ${ADMIN_EMAIL}</p>
-  </div>
   <div class="card2 rounded-xl p-4">
     <p class="text-xs font-bold muted uppercase mb-3">Data Protection</p>
     <div class="flex flex-wrap gap-2 items-center">
@@ -2011,15 +2074,6 @@ function adminSettingsView(){
     </div>
     <p class="text-[11px] muted mt-2">Importing will overwrite all current data after confirmation.</p>
   </div>`;
-}
-function changeAdminPasswordHandler(){
-  const pw1 = document.getElementById('newAdmPw').value;
-  const pw2 = document.getElementById('confirmAdmPw').value;
-  if(!pw1 || pw1.length<6){ alert('Password must be at least 6 characters.'); return; }
-  if(pw1!==pw2){ alert('Passwords do not match.'); return; }
-  setAdminPassword(pw1.trim());
-  alert('Admin password updated successfully.');
-  document.getElementById('newAdmPw').value=''; document.getElementById('confirmAdmPw').value='';
 }
 function exportBackup(){
   const blob = new Blob([JSON.stringify(DB, null, 2)], {type:'application/json'});
@@ -2044,11 +2098,13 @@ function importBackup(file){
    INIT
 ========================================================================= */
 function init(){
+  if(!history.state) history.replaceState({tab:'home'}, '', location.hash||'#home');
   renderNav();
   renderHero(); startHeroAuto();
   renderTicker();
   renderMentors();
   renderTab();
+  updateBackButtonVisibility();
   lucide.createIcons();
 }
 init();
