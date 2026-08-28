@@ -1,0 +1,17 @@
+{
+  "name": "TCE - The Competitive Edge",
+  "short_name": "TCE",
+  "description": "TCE - The Competitive Edge: WBP, KP SI, SSC GD, Railway (RRB) and WBPSC coaching with CBT mock tests, PYQs, quizzes and study materials.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0B0B0B",
+  "theme_color": "#0B0B0B",
+  "icons": [
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
