@@ -264,7 +264,7 @@ function getAdminPassword(){ return ADMIN_PASSWORD_DEFAULT; }
    LOCAL "DATABASE"
 ========================================================================= */
 const LS_KEY = 'tce_db_v2';
-const CUR_KEY = 'tce_current_user_v1';
+const CUR_KEY = 'currentUser';
 const ADM_KEY = 'tce_admin_session_v1';
 function uid(prefix){ return prefix+'_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
 function priceLabel(p){ return '₹'+p+' / Month'; }
@@ -483,28 +483,74 @@ function toggleTheme(){
 (function initTheme(){ const saved = localStorage.getItem('tce_theme'); if(saved==='light'){ document.documentElement.classList.remove('dark'); document.documentElement.classList.add('light'); } })();
 
 /* =========================================================================
-   HERO CAROUSEL
+   HERO BANNERS — persisted separately in localStorage('db_banners') so the
+   Admin Banner Manager can add/delete slides independently of the main DB.
 ========================================================================= */
+const BANNERS_KEY = 'db_banners';
+function loadBanners(){
+  const raw = localStorage.getItem(BANNERS_KEY);
+  if(raw){ try{ const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length) return arr; }catch(e){} }
+  // First run: seed from the DB's default banners so existing slides aren't lost.
+  const seeded = (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
+  localStorage.setItem(BANNERS_KEY, JSON.stringify(seeded));
+  return seeded;
+}
+function saveBanners(){ localStorage.setItem(BANNERS_KEY, JSON.stringify(BANNERS)); }
+let BANNERS = loadBanners();
+
 let heroIdx=0, heroTimer=null;
 function renderHero(){
   const wrap = document.getElementById('heroCarousel');
-  wrap.innerHTML = DB.banners.map((b,i)=>`
+  if(!BANNERS.length){
+    wrap.innerHTML = `<div class="absolute inset-0 gold-grad flex items-center"><div class="max-w-7xl mx-auto px-6 sm:px-10 w-full"><h1 class="font-display font-800 text-2xl sm:text-4xl text-black">TCE - The Competitive Edge</h1></div></div>`;
+    document.getElementById('heroDots').innerHTML = '';
+    return;
+  }
+  if(heroIdx>=BANNERS.length) heroIdx=0;
+  wrap.innerHTML = `<div id="heroTrack" class="absolute inset-0">` + BANNERS.map((b,i)=>`
     <div class="absolute inset-0 transition-opacity duration-700 ${i===heroIdx?'opacity-100':'opacity-0 pointer-events-none'}">
-      <div class="w-full h-full bg-gradient-to-br ${b.grad} flex items-center">
-        <div class="max-w-7xl mx-auto px-6 sm:px-10 w-full">
-          <span class="badge bg-black/30 text-white inline-block mb-3">${b.tag}</span>
-          <h1 class="font-display font-800 text-3xl sm:text-5xl text-black max-w-xl leading-tight">${b.title}</h1>
-          <p class="text-black/80 mt-3 max-w-md text-sm sm:text-base font-medium">${b.subtitle}</p>
+      <div class="w-full h-full ${b.image?'':'bg-gradient-to-br '+(b.grad||'from-amber-600 via-yellow-500 to-orange-600')} flex items-center relative overflow-hidden">
+        ${b.image?`<img src="${b.image}" alt="${b.title||'Banner'}" class="absolute inset-0 w-full h-full object-cover"><div class="absolute inset-0 bg-black/45"></div>`:''}
+        <div class="max-w-7xl mx-auto px-6 sm:px-10 w-full relative z-10">
+          ${b.tag?`<span class="badge bg-black/30 text-white inline-block mb-3">${b.tag}</span>`:''}
+          <h1 class="font-display font-800 text-3xl sm:text-5xl ${b.image?'text-white':'text-black'} max-w-xl leading-tight">${b.title||''}</h1>
+          <p class="${b.image?'text-white/85':'text-black/80'} mt-3 max-w-md text-sm sm:text-base font-medium">${b.subtitle||''}</p>
           <div class="flex gap-3 mt-6">
-            <button onclick="setTab('batches')" class="px-5 py-2.5 rounded-lg bg-black text-white text-sm font-bold">Enroll Now</button>
-            <button onclick="setTab('mocks')" class="px-5 py-2.5 rounded-lg bg-white/90 text-black text-sm font-bold">Try Free Mock</button>
+            ${b.link?`<a href="${b.link}" target="_blank" class="px-5 py-2.5 rounded-lg bg-black text-white text-sm font-bold">Learn More</a>`:`<button onclick="setTab('batches')" class="px-5 py-2.5 rounded-lg bg-black text-white text-sm font-bold">Enroll Now</button>`}
+            <button onclick="setTab('mocks')" class="px-5 py-2.5 rounded-lg ${b.image?'bg-white/90':'bg-white/90'} text-black text-sm font-bold">Try Free Mock</button>
           </div>
         </div>
       </div>
-    </div>`).join('');
-  document.getElementById('heroDots').innerHTML = DB.banners.map((_,i)=>`<button onclick="heroIdx=${i};renderHero()" class="w-2.5 h-2.5 rounded-full ${i===heroIdx?'bg-white':'bg-white/40'}"></button>`).join('');
+    </div>`).join('') + `</div>`;
+  document.getElementById('heroDots').innerHTML = BANNERS.map((_,i)=>`<button onclick="heroIdx=${i};renderHero();startHeroAuto();" class="w-2.5 h-2.5 rounded-full ${i===heroIdx?'bg-white':'bg-white/40'}"></button>`).join('');
+  attachHeroSwipe();
 }
-function startHeroAuto(){ clearInterval(heroTimer); heroTimer = setInterval(()=>{ heroIdx=(heroIdx+1)%DB.banners.length; renderHero(); }, 4500); }
+function startHeroAuto(){
+  clearInterval(heroTimer);
+  if(BANNERS.length<2) return;
+  heroTimer = setInterval(()=>{ heroIdx=(heroIdx+1)%BANNERS.length; renderHero(); }, 4500);
+}
+let heroTouchStartX=null, heroTouchStartY=null;
+function attachHeroSwipe(){
+  const el = document.getElementById('heroCarousel');
+  if(!el || el.dataset.swipeBound) return;
+  el.dataset.swipeBound = '1';
+  el.addEventListener('touchstart', (e)=>{ heroTouchStartX = e.touches[0].clientX; heroTouchStartY = e.touches[0].clientY; }, {passive:true});
+  el.addEventListener('touchmove', (e)=>{
+    if(heroTouchStartX===null) return;
+    const dx = e.touches[0].clientX - heroTouchStartX, dy = e.touches[0].clientY - heroTouchStartY;
+    if(Math.abs(dx) > Math.abs(dy)) e.preventDefault(); // treat as horizontal swipe, block page scroll
+  }, {passive:false});
+  el.addEventListener('touchend', (e)=>{
+    if(heroTouchStartX===null || !BANNERS.length) return;
+    const dx = e.changedTouches[0].clientX - heroTouchStartX;
+    if(Math.abs(dx) > 40){
+      heroIdx = dx < 0 ? (heroIdx+1)%BANNERS.length : (heroIdx-1+BANNERS.length)%BANNERS.length;
+      renderHero(); startHeroAuto();
+    }
+    heroTouchStartX=null; heroTouchStartY=null;
+  }, {passive:true});
+}
 function renderTicker(){ document.getElementById('tickerText').textContent = DB.ticker; }
 
 /* =========================================================================
@@ -579,21 +625,82 @@ function openLoginModal(){
       </div>`);
     return;
   }
+  authTab = 'login';
   openModal(`
     <div class="card glow-border rounded-2xl p-6">
-      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Student Login</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
-      <button onclick="googleSignIn()" class="w-full flex items-center justify-center gap-2 border rounded-lg py-2.5 text-sm font-semibold mb-4" style="border-color:var(--border)">
+      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Student Account</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="flex gap-2 mb-4 card2 rounded-lg p-1">
+        <button id="authTabLoginBtn" onclick="setAuthTab('login')" class="flex-1 rounded-md py-2 text-xs font-bold tab-active">Login</button>
+        <button id="authTabSignupBtn" onclick="setAuthTab('signup')" class="flex-1 rounded-md py-2 text-xs font-bold muted">Create Account</button>
+      </div>
+      <div id="authTabContent"></div>
+      <div class="text-center text-xs muted my-4">— or —</div>
+      <button onclick="googleSignIn()" class="w-full flex items-center justify-center gap-2 border rounded-lg py-2.5 text-sm font-semibold" style="border-color:var(--border)">
         <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.7l6-6C33.6 6.5 29.1 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.3-.3-3.5z"/></svg>
         Continue with Google
       </button>
-      <div class="text-center text-xs muted mb-4">— or continue with phone/email —</div>
-      <div class="space-y-3">
-        <input id="li_name" type="text" placeholder="Full Name" class="w-full rounded-lg px-3 py-2.5 text-sm">
-        <input id="li_phone" type="tel" placeholder="Phone Number" class="w-full rounded-lg px-3 py-2.5 text-sm">
-        <input id="li_email" type="email" placeholder="Email (optional)" class="w-full rounded-lg px-3 py-2.5 text-sm">
-        <button onclick="manualSignIn()" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">Login / Register</button>
-      </div>
     </div>`);
+  renderAuthTabContent();
+}
+let authTab = 'login';
+function setAuthTab(tab){
+  authTab = tab;
+  const lb = document.getElementById('authTabLoginBtn'), sb = document.getElementById('authTabSignupBtn');
+  if(lb && sb){
+    lb.classList.toggle('tab-active', tab==='login'); lb.classList.toggle('muted', tab!=='login');
+    sb.classList.toggle('tab-active', tab==='signup'); sb.classList.toggle('muted', tab!=='signup');
+  }
+  renderAuthTabContent();
+}
+function renderAuthTabContent(){
+  const wrap = document.getElementById('authTabContent'); if(!wrap) return;
+  if(authTab==='login'){
+    wrap.innerHTML = `
+      <div class="space-y-3">
+        <input id="auth_email" type="email" placeholder="Email" onkeydown="if(event.key==='Enter')loginUser()" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="auth_password" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')loginUser()" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <p id="auth_login_error" class="hidden text-xs text-red-400"></p>
+        <button onclick="loginUser()" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">Login</button>
+      </div>`;
+  } else {
+    wrap.innerHTML = `
+      <div class="space-y-3">
+        <input id="su_name" type="text" placeholder="Full Name" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="su_email" type="email" placeholder="Email" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="su_phone" type="tel" placeholder="Phone Number" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="su_password" type="password" placeholder="Password" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="su_confirm" type="password" placeholder="Confirm Password" onkeydown="if(event.key==='Enter')signupUser()" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <p id="auth_signup_error" class="hidden text-xs text-red-400"></p>
+        <button onclick="signupUser()" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">Create Account</button>
+      </div>`;
+  }
+  lucide.createIcons();
+}
+function loginUser(){
+  const email = (document.getElementById('auth_email').value||'').trim().toLowerCase();
+  const password = document.getElementById('auth_password').value||'';
+  const errEl = document.getElementById('auth_login_error');
+  const showErr = (msg)=>{ if(errEl){ errEl.textContent = msg; errEl.classList.remove('hidden'); } else alert(msg); };
+  if(!email || !password){ showErr('Please enter both email and password.'); return; }
+  const student = DB.students.find(s=> (s.email||'').toLowerCase()===email);
+  if(!student || !student.password || student.password !== password){ showErr('Invalid email or password.'); return; }
+  setCurrentUser(student); closeModal(); setTab('dashboard');
+}
+function signupUser(){
+  const name = document.getElementById('su_name').value.trim();
+  const email = document.getElementById('su_email').value.trim();
+  const phone = document.getElementById('su_phone').value.trim();
+  const password = document.getElementById('su_password').value;
+  const confirm = document.getElementById('su_confirm').value;
+  const errEl = document.getElementById('auth_signup_error');
+  const showErr = (msg)=>{ if(errEl){ errEl.textContent = msg; errEl.classList.remove('hidden'); } else alert(msg); };
+  if(!name || !email || !phone || !password || !confirm){ showErr('Please fill in all fields.'); return; }
+  if(password.length<6){ showErr('Password must be at least 6 characters.'); return; }
+  if(password!==confirm){ showErr('Passwords do not match.'); return; }
+  if(DB.students.some(s=> (s.email||'').toLowerCase()===email.toLowerCase())){ showErr('An account with this email already exists. Please login instead.'); return; }
+  const student = {id:uid('st'), name, email, phone, password, address:'', joinDate:new Date().toISOString().slice(0,10), paymentStatus:'Not Enrolled', batch:'—'};
+  DB.students.push(student); saveDB();
+  setCurrentUser(student); closeModal(); setTab('dashboard');
 }
 function googleSignIn(){
   if(!DEMO_MODE && fbAuth){
@@ -605,13 +712,6 @@ function googleSignIn(){
   const name = prompt("Demo Google Sign-In\\nEnter your name to simulate Google login:");
   if(!name) return;
   finalizeLogin({name, email:name.toLowerCase().replace(/\\s+/g,'.')+'@gmail.com', phone:''});
-}
-function manualSignIn(){
-  const name = document.getElementById('li_name').value.trim();
-  const phone = document.getElementById('li_phone').value.trim();
-  const email = document.getElementById('li_email').value.trim();
-  if(!name||!phone){ alert('Please enter name and phone number.'); return; }
-  finalizeLogin({name,phone,email});
 }
 function finalizeLogin(profile){
   let student = DB.students.find(s=> (profile.email && s.email===profile.email) || (profile.phone && s.phone===profile.phone));
@@ -871,6 +971,7 @@ function showPreExamInstructions(testId, source, subject){
         <p><b>Test:</b> ${test.title}</p>
         <p><b>Total Questions:</b> ${test.questions.length}</p>
         <p><b>Duration:</b> ${test.durationMin} minutes</p>
+        <p><b>Total Marks:</b> ${+(test.questions.length*test.marksCorrect).toFixed(2)}</p>
         <p><b>Marking Scheme:</b> <span class="text-emerald-400">+${test.marksCorrect}</span> for correct, <span class="text-red-400">-${test.marksWrong}</span> for wrong</p>
       </div>
       <ul class="text-xs muted space-y-1.5 mb-5 list-disc pl-4">
@@ -878,10 +979,11 @@ function showPreExamInstructions(testId, source, subject){
         <li>Switching tabs or exiting full-screen will trigger a warning; 3 violations auto-submit your test.</li>
         <li>Use "Save & Next", "Mark for Review & Next" and "Clear Response" to navigate.</li>
         <li>Your answers auto-save — you can resume if your browser refreshes or disconnects.</li>
+        <li>The timer starts the instant you click "Start Test Now" and cannot be paused.</li>
       </ul>
       ${hasResume? `<button onclick="resumeExam()" class="w-full btn-gold rounded-lg py-3 text-sm font-bold mb-2 flex items-center justify-center gap-2"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>Resume Previous Attempt</button>
       <button onclick="beginExam('${testId}','${source}','${subject||''}')" class="w-full btn-ghost rounded-lg py-2.5 text-xs font-bold">Start Fresh Instead (discards saved progress)</button>`
-      : `<button onclick="beginExam('${testId}','${source}','${subject||''}')" class="w-full btn-gold rounded-lg py-3 text-sm font-bold flex items-center justify-center gap-2"><i data-lucide="play" class="w-4 h-4"></i>Begin Exam</button>`}
+      : `<button onclick="beginExam('${testId}','${source}','${subject||''}')" class="w-full btn-gold rounded-lg py-3 text-sm font-bold flex items-center justify-center gap-2"><i data-lucide="play" class="w-4 h-4"></i>Start Test Now</button>`}
     </div>`);
 }
 function beginExam(testId, source, subject){
@@ -1245,16 +1347,43 @@ function initQuizTab(){
       <i data-lucide="zap" class="w-6 h-6 gold-text mx-auto mb-2"></i>
       <p class="font-display font-800 text-xl">${q} Qs</p>
       <p class="text-xs muted mb-4">${m} minutes</p>
-      <button onclick="startQuickQuiz(${q},${m})" class="w-full btn-gold rounded-lg py-2.5 text-xs font-bold">Start Quiz</button>
+      <button onclick="showQuizInstructions(${q},${m})" class="w-full btn-gold rounded-lg py-2.5 text-xs font-bold">Start Quiz</button>
     </div>`).join('');
   lucide.createIcons();
 }
-function startQuickQuiz(qCount, mins){
+function showQuizInstructions(qCount, mins){
+  const user = getCurrentUser();
+  if(!user){ alert('Please login to start the quiz.'); openLoginModal(); return; }
+  const gkOnly = DB.quizPool.filter(q=>q.subject==='gk');
+  if(gkOnly.length===0){ alert('No GK questions are available yet. Please check back soon.'); return; }
+  const actualCount = Math.min(qCount, gkOnly.length);
+  const totalMarks = actualCount * 1;
+  openModal(`
+    <div class="card glow-border rounded-2xl p-6">
+      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Quiz Instructions</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="card2 rounded-xl p-4 mb-4 text-sm space-y-2">
+        <p><b>Quiz:</b> Quick Quiz — General Knowledge</p>
+        <p><b>Total Questions:</b> ${actualCount}</p>
+        <p><b>Duration:</b> ${mins} minutes</p>
+        <p><b>Total Marks:</b> ${totalMarks}</p>
+        <p><b>Marking Scheme:</b> <span class="text-emerald-400">+1</span> for correct, <span class="text-red-400">-0.25</span> for wrong</p>
+      </div>
+      <ul class="text-xs muted space-y-1.5 mb-5 list-disc pl-4">
+        <li>The quiz will open in full-screen mode for a distraction-free experience.</li>
+        <li>Switching tabs or exiting full-screen will trigger a warning; 3 violations auto-submit your quiz.</li>
+        <li>Use "Save & Next", "Mark for Review & Next" and "Clear Response" to navigate.</li>
+        <li>The timer starts the instant you click "Start Test Now" and cannot be paused.</li>
+      </ul>
+      <button onclick="beginQuickQuiz(${qCount},${mins})" class="w-full btn-gold rounded-lg py-3 text-sm font-bold flex items-center justify-center gap-2"><i data-lucide="play" class="w-4 h-4"></i>Start Test Now</button>
+    </div>`);
+}
+function beginQuickQuiz(qCount, mins){
   const user = getCurrentUser();
   if(!user){ alert('Please login to start the quiz.'); openLoginModal(); return; }
   const gkOnly = DB.quizPool.filter(q=>q.subject==='gk');
   if(gkOnly.length===0){ alert('No GK questions are available yet. Please check back soon.'); return; }
   const pool = shuffle(gkOnly).slice(0, Math.min(qCount, gkOnly.length)).map(q=>({...q, options: shuffle(q.options)}));
+  closeModal();
   examState = {
     testId: 'quiz_'+qCount, source:'quiz', subject:'quiz', title: `Quick Quiz — GK — ${pool.length} Questions`, durationSec: mins*60, remaining: mins*60,
     marksCorrect: 1, marksWrong: 0.25, questions: pool, answers: new Array(pool.length).fill(null),
@@ -1390,17 +1519,9 @@ function tplBatches(){
         <h3 class="font-display font-800 text-2xl text-black">${b.name}</h3>
         <p class="text-black/80 text-sm mt-1">${priceLabel(b.price)} — Monthly enrollment fee</p>
       </div>
-      <div class="p-6 sm:p-8 grid sm:grid-cols-2 gap-8">
-        <div>
-          <h4 class="font-semibold text-sm mb-3">Class Routine</h4>
-          <div class="space-y-2 text-sm muted">
-            ${b.timetable.map(t=>`<div class="flex justify-between card2 rounded-lg px-3 py-2"><span>${t[0]}</span><span class="gold-text">${t[1]}</span></div>`).join('')}
-          </div>
-        </div>
-        <div>
-          <h4 class="font-semibold text-sm mb-3">What's Included</h4>
-          <ul class="space-y-2 text-sm muted">${b.features.map(f=>`<li class="flex gap-2 items-center"><i data-lucide="check-circle" class="w-4 h-4 gold-text"></i>${f}</li>`).join('')}</ul>
-        </div>
+      <div class="p-6 sm:p-8">
+        <h4 class="font-semibold text-sm mb-3">What's Included</h4>
+        <ul class="space-y-2 text-sm muted">${b.features.map(f=>`<li class="flex gap-2 items-center"><i data-lucide="check-circle" class="w-4 h-4 gold-text"></i>${f}</li>`).join('')}</ul>
       </div>
       <div class="px-6 sm:px-8 pb-8">
         <button onclick="openEnrollModal('batch','${b.id}')" class="w-full sm:w-auto btn-gold rounded-lg px-8 py-3 text-sm font-bold">Enroll Now — ${priceLabel(b.price)}</button>
@@ -1573,7 +1694,7 @@ function openAdminPanel(){
         <div class="flex gap-2"><button onclick="adminLogout()" class="btn-ghost rounded-md px-3 py-1.5 text-xs font-bold">Logout</button><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
       </div>
       <div class="flex gap-1 px-5 pt-3 overflow-x-auto hide-scrollbar">
-        ${[['students','Students'],['results','Mock Results'],['questions','Mock/PYQ Manager'],['pyq','PYQ Uploader'],['gkquiz','GK Quiz Uploader'],['materials','Materials'],['batches','Batches'],['content','Notices'],['settings','Settings']].map(t=>`
+        ${[['students','Students'],['results','Mock Results'],['questions','Mock/PYQ Manager'],['pyq','PYQ Uploader'],['gkquiz','GK Quiz Uploader'],['materials','Materials'],['batches','Batches'],['banners','Banner Slider'],['content','Notices'],['settings','Settings']].map(t=>`
           <button onclick="adminTab='${t[0]}';renderAdminBody()" id="adt_${t[0]}" class="px-3 py-2 rounded-t-lg text-xs font-bold whitespace-nowrap ${adminTab===t[0]?'tab-active':'muted'}">${t[1]}</button>`).join('')}
       </div>
       <div id="adminBody" class="p-5 max-h-[65vh] overflow-y-auto"></div>
@@ -1591,6 +1712,7 @@ function renderAdminBody(){
   else if(adminTab==='gkquiz') body.innerHTML = adminGkQuizView();
   else if(adminTab==='materials') body.innerHTML = adminMaterialsView();
   else if(adminTab==='batches') body.innerHTML = adminBatchesView();
+  else if(adminTab==='banners') body.innerHTML = adminBannersView();
   else if(adminTab==='content') body.innerHTML = adminContentView();
   else if(adminTab==='settings') body.innerHTML = adminSettingsView();
   lucide.createIcons();
@@ -2047,6 +2169,64 @@ function editBatch(id){
 }
 function toggleBatchActive(id){ const b=DB.batches.find(x=>x.id===id); if(b){ b.active=!b.active; saveDB(); renderAdminBody(); } }
 function deleteBatch(id){ if(!confirm('Delete this batch permanently?')) return; DB.batches=DB.batches.filter(b=>b.id!==id); saveDB(); renderAdminBody(); }
+
+/* --- Banner / Hero Slider Manager --- */
+function adminBannersView(){
+  return `
+  <div class="card2 rounded-xl p-4 mb-6">
+    <p class="text-xs font-bold muted uppercase mb-3">Add New Banner</p>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <input id="newBnTitle" type="text" placeholder="Banner Title" class="rounded-lg px-3 py-2 text-xs">
+      <input id="newBnSubtitle" type="text" placeholder="Subtitle" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2 items-center">
+      <label class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+        <i data-lucide="image-up" class="w-3.5 h-3.5"></i><span id="newBnFileLabel">Choose Banner Image</span>
+        <input id="newBnFile" type="file" accept="image/*" class="hidden" onchange="document.getElementById('newBnFileLabel').textContent=this.files[0]?this.files[0].name:'Choose Banner Image'">
+      </label>
+      <input id="newBnUrl" type="text" placeholder="...or paste a direct image URL instead" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <input id="newBnLink" type="text" placeholder="Optional link (e.g. https://... opens when banner CTA is clicked)" class="w-full rounded-lg px-3 py-2 text-xs mb-2">
+    <button onclick="uploadBanner()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold flex items-center gap-1.5"><i data-lucide="upload" class="w-3.5 h-3.5"></i>+ Add Banner</button>
+    <p class="text-[11px] muted mt-2">If no image is uploaded, the banner falls back to a gold gradient background.</p>
+  </div>
+  <p class="text-xs font-bold muted uppercase mb-2">Active Banners (${BANNERS.length})</p>
+  <div class="space-y-2">
+    ${BANNERS.length ? BANNERS.map(b=>`
+      <div class="card2 rounded-xl p-3 flex items-center gap-3">
+        ${b.image? `<img src="${b.image}" class="w-20 h-14 object-cover rounded-lg shrink-0">` : `<div class="w-20 h-14 rounded-lg gold-grad shrink-0 flex items-center justify-center text-ink text-[10px] font-bold">No Image</div>`}
+        <div class="flex-1 min-w-0"><p class="font-semibold text-sm truncate">${b.title||'(untitled)'}</p><p class="text-xs muted truncate">${b.subtitle||''}</p></div>
+        <button onclick="deleteBanner('${b.id}')" class="rounded-lg px-3 py-1.5 text-[11px] font-bold bg-red-600 text-white shrink-0 flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete</button>
+      </div>`).join('') : '<p class="muted text-sm">No banners yet — add one above.</p>'}
+  </div>`;
+}
+function uploadBanner(){
+  const title = document.getElementById('newBnTitle').value.trim();
+  const subtitle = document.getElementById('newBnSubtitle').value.trim();
+  const url = document.getElementById('newBnUrl').value.trim();
+  const link = document.getElementById('newBnLink').value.trim();
+  const fileInput = document.getElementById('newBnFile');
+  const file = fileInput.files && fileInput.files[0];
+  if(!title){ alert('Please enter a banner title.'); return; }
+  const finalize = (imageSrc)=>{
+    BANNERS.push({id:uid('bn'), title, subtitle, image: imageSrc||'', link, grad:'from-amber-600 via-yellow-500 to-orange-600', tag:''});
+    saveBanners(); heroIdx = BANNERS.length-1; renderHero(); startHeroAuto(); renderAdminBody();
+  };
+  if(file){
+    if(!file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+    const reader = new FileReader();
+    reader.onload = (e)=> finalize(e.target.result);
+    reader.onerror = ()=>{ alert('Could not read the selected image. Try again or paste a URL instead.'); finalize(url); };
+    reader.readAsDataURL(file);
+  } else {
+    finalize(url);
+  }
+}
+function deleteBanner(id){
+  if(!confirm('Delete this banner permanently?')) return;
+  BANNERS = BANNERS.filter(b=>b.id!==id);
+  saveBanners(); heroIdx=0; renderHero(); startHeroAuto(); renderAdminBody();
+}
 
 /* --- Content: Notices --- */
 function adminContentView(){
