@@ -119,6 +119,12 @@
 </head>
 <body class="no-tap-highlight">
 
+<!-- =============== BOOT LOADER (shown while initial data loads from Firestore) =============== -->
+<div id="bootLoader" class="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-4" style="background:var(--bg);">
+  <div class="w-14 h-14 rounded-2xl gold-grad flex items-center justify-center font-display font-800 text-ink text-2xl animate-pulse">T</div>
+  <p class="text-sm muted">Loading TCE - The Competitive Edge...</p>
+</div>
+
 <!-- =============== NAVBAR =============== -->
 <header class="sticky top-0 z-40 backdrop-blur-md" style="background:color-mix(in srgb, var(--bg) 88%, transparent); border-bottom:1px solid var(--border);">
   <div class="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between h-16 gap-2">
@@ -242,10 +248,14 @@
    FIREBASE CONFIGURATION (replace with real project credentials to go live)
 ========================================================================= */
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT.firebaseapp.com", projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com", messagingSenderId: "YOUR_SENDER_ID", appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAelAmzeV33Ejc6i-aDKJg_GDgqJdswCI4",
+  authDomain: "tce-nahata.firebaseapp.com",
+  projectId: "tce-nahata",
+  storageBucket: "tce-nahata.firebasestorage.app",
+  messagingSenderId: "718216468668",
+  appId: "1:718216468668:web:517364ed83fdff2fd918b9"
 };
-const DEMO_MODE = true; // set false after filling in real firebaseConfig above
+const DEMO_MODE = false;
 let fbApp=null, fbAuth=null, fbDB=null, fbStorage=null;
 if(!DEMO_MODE){
   try{ fbApp = firebase.initializeApp(firebaseConfig); fbAuth = firebase.auth(); fbDB = firebase.firestore(); fbStorage = firebase.storage(); }
@@ -263,7 +273,6 @@ function getAdminPassword(){ return ADMIN_PASSWORD_DEFAULT; }
 /* =========================================================================
    LOCAL "DATABASE"
 ========================================================================= */
-const LS_KEY = 'tce_db_v2';
 const CUR_KEY = 'currentUser';
 const ADM_KEY = 'tce_admin_session_v1';
 function uid(prefix){ return prefix+'_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
@@ -405,19 +414,94 @@ function normalizeDB(db){
   (db.mentors||[]).forEach(m=>{ if(m.name==="Tanujoy Mallick"){ m.subject="General Studies"; delete m.nameBn; } });
   return db;
 }
-function loadDB(){
-  let raw = localStorage.getItem(LS_KEY);
-  if(!raw){ const seeded = seedDB(); localStorage.setItem(LS_KEY, JSON.stringify(seeded)); return seeded; }
-  try{
-    const parsed = JSON.parse(raw);
-    const seeded = seedDB();
-    // fill in any missing keys for backward compatibility with older saved DBs
-    Object.keys(seeded).forEach(k=>{ if(!(k in parsed)) parsed[k]=seeded[k]; });
-    return normalizeDB(parsed);
-  }catch(e){ const seeded = seedDB(); localStorage.setItem(LS_KEY, JSON.stringify(seeded)); return seeded; }
+
+/* =========================================================================
+   FIRESTORE-BACKED PERSISTENCE
+   -------------------------------------------------------------------------
+   The whole app keeps working against the same in-memory `DB` object as
+   before (DB.students, DB.mockTests, etc.) — only the load/save internals
+   now talk to Cloud Firestore instead of localStorage, and every document
+   gets a live onSnapshot listener so changes made by the admin (or by any
+   other open browser/device) sync to everyone in real time.
+========================================================================= */
+const FS_COLLECTION = 'tce_app_data';
+const DB_KEYS = ['examCategories','banners','ticker','students','mockTests','quizPool','pyqSets','submissions','materials','notices','inquiries','batches','mentors'];
+function sanitizeForFirestore(value){ return JSON.parse(JSON.stringify(value)); } // strips undefined/functions, guarantees plain JSON
+
+async function seedFirestoreFromScratch(){
+  const seeded = seedDB();
+  const batch = fbDB.batch();
+  DB_KEYS.forEach(key=>{
+    const ref = fbDB.collection(FS_COLLECTION).doc(key);
+    batch.set(ref, { value: sanitizeForFirestore(seeded[key]) });
+  });
+  await batch.commit();
+  return seeded;
 }
-function saveDB(){ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
-let DB = loadDB();
+async function loadDB(){
+  if(DEMO_MODE || !fbDB){
+    // Fallback so the app still runs (e.g. offline, or Firebase misconfigured) using the same in-memory defaults.
+    console.warn('Firestore is not available — running on local in-memory demo data only (nothing will be saved).');
+    return normalizeDB(seedDB());
+  }
+  try{
+    const coreDoc = await fbDB.collection(FS_COLLECTION).doc('mockTests').get();
+    if(!coreDoc.exists){
+      // First-time setup for this Firebase project: seed Firestore with the default demo dataset.
+      const seeded = await seedFirestoreFromScratch();
+      return normalizeDB(seeded);
+    }
+    const assembled = {};
+    const seeded = seedDB(); // used only to backfill any keys/docs that don't exist yet
+    await Promise.all(DB_KEYS.map(async (key)=>{
+      const snap = await fbDB.collection(FS_COLLECTION).doc(key).get();
+      if(snap.exists){
+        const data = snap.data();
+        assembled[key] = ('value' in data) ? data.value : seeded[key];
+      } else {
+        assembled[key] = seeded[key];
+        fbDB.collection(FS_COLLECTION).doc(key).set({ value: sanitizeForFirestore(seeded[key]) }).catch(()=>{});
+      }
+    }));
+    return normalizeDB(assembled);
+  }catch(e){
+    console.error('Could not load data from Firestore, falling back to local demo data.', e);
+    return normalizeDB(seedDB());
+  }
+}
+function saveDB(){
+  if(DEMO_MODE || !fbDB) return;
+  const batch = fbDB.batch();
+  DB_KEYS.forEach(key=>{
+    const ref = fbDB.collection(FS_COLLECTION).doc(key);
+    batch.set(ref, { value: sanitizeForFirestore(DB[key]) });
+  });
+  batch.commit().catch(err=>{
+    console.error('Firestore save failed:', err);
+    alert('⚠ Could not sync your latest change to the cloud database. If you just uploaded a large PDF or image, it may exceed Firestore\'s 1MB per-document limit — try a smaller file or paste a direct URL instead.');
+  });
+}
+function isAdminPanelOpen(){ return !!document.getElementById('adminBody'); }
+function handleRemoteDbChange(){
+  if(examState) return; // never disrupt a test/quiz in progress
+  try{
+    renderNav(); renderTicker(); renderMentors();
+    if(isAdminPanelOpen()) renderAdminBody();
+    else if(!document.getElementById('modalRoot').innerHTML.trim()) renderTab();
+  }catch(e){ console.warn('Live sync re-render skipped:', e); }
+}
+function attachDbRealtimeListeners(){
+  if(DEMO_MODE || !fbDB) return;
+  DB_KEYS.forEach(key=>{
+    fbDB.collection(FS_COLLECTION).doc(key).onSnapshot(snap=>{
+      if(!snap.exists || snap.metadata.hasPendingWrites) return; // ignore our own optimistic local write echo
+      const data = snap.data();
+      DB[key] = ('value' in data) ? data.value : DB[key];
+      handleRemoteDbChange();
+    }, err=> console.warn('Live sync listener error for '+key+':', err));
+  });
+}
+let DB = normalizeDB(seedDB()); // placeholder until Firestore data loads during boot()
 
 function getCurrentUser(){ try{ return JSON.parse(localStorage.getItem(CUR_KEY)||'null'); }catch(e){ return null; } }
 function setCurrentUser(u){ localStorage.setItem(CUR_KEY, JSON.stringify(u)); renderNav(); }
@@ -483,20 +567,50 @@ function toggleTheme(){
 (function initTheme(){ const saved = localStorage.getItem('tce_theme'); if(saved==='light'){ document.documentElement.classList.remove('dark'); document.documentElement.classList.add('light'); } })();
 
 /* =========================================================================
-   HERO BANNERS — persisted separately in localStorage('db_banners') so the
-   Admin Banner Manager can add/delete slides independently of the main DB.
+   HERO BANNERS — persisted in Firestore doc tce_app_data/heroBanners so the
+   Admin Banner Manager syncs live across every device/browser.
 ========================================================================= */
-const BANNERS_KEY = 'db_banners';
-function loadBanners(){
-  const raw = localStorage.getItem(BANNERS_KEY);
-  if(raw){ try{ const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length) return arr; }catch(e){} }
-  // First run: seed from the DB's default banners so existing slides aren't lost.
-  const seeded = (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
-  localStorage.setItem(BANNERS_KEY, JSON.stringify(seeded));
-  return seeded;
+const BANNERS_DOC_ID = 'heroBanners';
+async function loadBanners(){
+  if(DEMO_MODE || !fbDB){
+    return (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
+  }
+  try{
+    const snap = await fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).get();
+    if(snap.exists){
+      const data = snap.data();
+      if(Array.isArray(data.value) && data.value.length) return data.value;
+    }
+    // First-time setup: seed from the DB's default banners so existing slides aren't lost.
+    const seeded = (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
+    await fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).set({ value: sanitizeForFirestore(seeded) });
+    return seeded;
+  }catch(e){
+    console.error('Could not load banners from Firestore, using local defaults.', e);
+    return (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
+  }
 }
-function saveBanners(){ localStorage.setItem(BANNERS_KEY, JSON.stringify(BANNERS)); }
-let BANNERS = loadBanners();
+function saveBanners(){
+  if(DEMO_MODE || !fbDB) return;
+  fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).set({ value: sanitizeForFirestore(BANNERS) }).catch(err=>{
+    console.error('Firestore banner save failed:', err);
+    alert('⚠ Could not sync this banner to the cloud database. If you uploaded a large image, it may exceed Firestore\'s 1MB per-document limit — try a smaller image or paste a direct URL instead.');
+  });
+}
+function attachBannersRealtimeListener(){
+  if(DEMO_MODE || !fbDB) return;
+  fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).onSnapshot(snap=>{
+    if(!snap.exists || snap.metadata.hasPendingWrites) return; // ignore our own optimistic local write echo
+    const data = snap.data();
+    if(Array.isArray(data.value)){
+      BANNERS = data.value;
+      if(heroIdx>=BANNERS.length) heroIdx=0;
+      renderHero(); startHeroAuto();
+      if(isAdminPanelOpen()) renderAdminBody();
+    }
+  }, err=> console.warn('Live sync listener error for banners:', err));
+}
+let BANNERS = [];
 
 let heroIdx=0, heroTimer=null;
 function renderHero(){
@@ -2287,7 +2401,22 @@ function init(){
   updateBackButtonVisibility();
   lucide.createIcons();
 }
-init();
+function hideBootLoader(){ const el = document.getElementById('bootLoader'); if(el) el.remove(); }
+async function boot(){
+  try{
+    DB = await loadDB();
+    BANNERS = await loadBanners();
+    attachDbRealtimeListeners();
+    attachBannersRealtimeListener();
+  }catch(e){
+    console.error('Startup data load failed, falling back to local demo data only (nothing will be saved).', e);
+    DB = normalizeDB(seedDB());
+    BANNERS = (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
+  }
+  hideBootLoader();
+  init();
+}
+boot();
 </script>
 </body>
 </html>
