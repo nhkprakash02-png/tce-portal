@@ -488,10 +488,17 @@ function attachDbRealtimeListeners(){
   if(DEMO_MODE || !fbDB) return;
   DB_KEYS.forEach(key=>{
     fbDB.collection(FS_COLLECTION).doc(key).onSnapshot(snap=>{
-      if(!snap.exists || snap.metadata.hasPendingWrites) return; // ignore our own optimistic local write echo
+      if(!snap.exists) return;
       const data = snap.data();
-      DB[key] = ('value' in data) ? data.value : DB[key];
-      handleRemoteDbChange();
+      const incoming = ('value' in data) ? data.value : DB[key];
+      // Compare against what we already have locally so we only re-render on a GENUINE
+      // change (from another admin/device). This also correctly ignores the snapshot
+      // that fires when Firestore confirms our own write, since that content already
+      // matches what we set locally — without this check, every save (even our own)
+      // would re-trigger a re-render and could wipe an admin form mid-edit.
+      const changed = JSON.stringify(DB[key]) !== JSON.stringify(incoming);
+      DB[key] = incoming;
+      if(changed) handleRemoteDbChange();
     }, err=> console.warn('Live sync listener error for '+key+':', err));
   });
 }
@@ -594,10 +601,12 @@ function saveBanners(){
 function attachBannersRealtimeListener(){
   if(DEMO_MODE || !fbDB) return;
   fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).onSnapshot(snap=>{
-    if(!snap.exists || snap.metadata.hasPendingWrites) return; // ignore our own optimistic local write echo
+    if(!snap.exists) return;
     const data = snap.data();
-    if(Array.isArray(data.value)){
-      BANNERS = data.value;
+    if(!Array.isArray(data.value)) return;
+    const changed = JSON.stringify(BANNERS) !== JSON.stringify(data.value);
+    BANNERS = data.value;
+    if(changed){
       if(heroIdx>=BANNERS.length) heroIdx=0;
       renderHero(); startHeroAuto();
       if(isAdminPanelOpen()) renderAdminBody();
@@ -2314,18 +2323,34 @@ function uploadBanner(){
   const url = document.getElementById('newBnUrl').value.trim();
   const link = document.getElementById('newBnLink').value.trim();
   const fileInput = document.getElementById('newBnFile');
-  const file = fileInput.files && fileInput.files[0];
+  const file = fileInput && fileInput.files && fileInput.files[0];
   if(!title){ alert('Please enter a banner title.'); return; }
   const finalize = (imageSrc)=>{
     BANNERS.push({id:uid('bn'), title, subtitle, image: imageSrc||'', link, grad:'from-amber-600 via-yellow-500 to-orange-600', tag:''});
     saveBanners(); heroIdx = BANNERS.length-1; renderHero(); startHeroAuto(); renderAdminBody();
   };
   if(file){
-    if(!file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
-    const reader = new FileReader();
-    reader.onload = (e)=> finalize(e.target.result);
-    reader.onerror = ()=>{ alert('Could not read the selected image. Try again or paste a URL instead.'); finalize(url); };
-    reader.readAsDataURL(file);
+    // Some browsers/file managers (especially on mobile) leave file.type blank for a
+    // valid image, so fall back to checking the file extension instead of hard-blocking.
+    const looksLikeImage = file.type.startsWith('image/') || /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(file.name||'');
+    if(!looksLikeImage){ alert('Please choose a valid image file (JPG, PNG, GIF, WEBP, BMP or SVG).'); return; }
+    if(file.size > 4*1024*1024){ alert('That image is larger than 4MB, which is too big to store. Please choose a smaller image or paste a direct image URL instead.'); return; }
+    try{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const result = e.target && e.target.result;
+        if(!result){ alert('Could not read the selected image (empty result). Please try again or paste a URL instead.'); return; }
+        finalize(result);
+      };
+      reader.onerror = ()=>{
+        const detail = (reader.error && reader.error.message) ? reader.error.message : 'unknown error';
+        alert('Could not read the selected image (' + detail + '). Please try a different image file or paste a direct image URL instead.');
+      };
+      reader.onabort = ()=>{ alert('Image reading was cancelled. Please try again.'); };
+      reader.readAsDataURL(file);
+    }catch(err){
+      alert('Could not read the selected image (' + (err && err.message ? err.message : err) + '). Please try again or paste a URL instead.');
+    }
   } else {
     finalize(url);
   }
@@ -2346,7 +2371,7 @@ function adminContentView(){
   </div>`;
 }
 function addNotice(){ const title = document.getElementById('notice_title').value.trim(); if(!title) return; DB.notices.push({id:uid('nt'), title, date:new Date().toISOString().slice(0,10), body:''}); saveDB(); renderAdminBody(); }
-function deleteNotice(id){ DB.notices = DB.notices.filter(n=>n.id!==id); saveDB(); renderAdminBody(); }
+function deleteNotice(id){ if(!confirm('Delete this notice permanently?')) return; DB.notices = DB.notices.filter(n=>n.id!==id); saveDB(); renderAdminBody(); }
 
 /* --- Settings: Change Password + Backup/Restore --- */
 function adminSettingsView(){
