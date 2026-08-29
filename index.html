@@ -410,26 +410,94 @@ function normalizeDB(db){
 }
 
 /* =========================================================================
-   FIRESTORE-BACKED PERSISTENCE
+   FIRESTORE-BACKED PERSISTENCE (auto-chunked to stay under the 1MB/doc limit)
    -------------------------------------------------------------------------
    The whole app keeps working against the same in-memory `DB` object as
    before (DB.students, DB.mockTests, etc.) — only the load/save internals
-   now talk to Cloud Firestore instead of localStorage, and every document
-   gets a live onSnapshot listener so changes made by the admin (or by any
-   other open browser/device) sync to everyone in real time.
+   talk to Cloud Firestore instead of localStorage. Every top-level key is
+   stored under `tce_app_data/{key}`. Small values are written straight onto
+   that document; anything that would exceed a safe per-document size is
+   AUTOMATICALLY split across numbered chunk documents in a
+   `tce_app_data/{key}/chunks` subcollection and transparently reassembled
+   on read. This means bulk JSON uploads (GK quizzes, materials, PYQs, or
+   any future large dataset) can never hit Firestore's 1MB document-size
+   limit, no matter how large they grow — and every document still gets a
+   live onSnapshot listener so changes sync to everyone in real time.
 ========================================================================= */
 const FS_COLLECTION = 'tce_app_data';
 const DB_KEYS = ['examCategories','banners','ticker','students','mockTests','quizPool','pyqSets','submissions','materials','notices','inquiries','batches','mentors'];
+const FS_MAX_DOC_BYTES = 900000; // safety margin under Firestore's 1,048,576 byte/doc limit
 function sanitizeForFirestore(value){ return JSON.parse(JSON.stringify(value)); } // strips undefined/functions, guarantees plain JSON
+function utf8ByteLength(str){ return new TextEncoder().encode(str).length; }
+
+// Splits `str` into pieces that are each guaranteed to be <= maxBytes when UTF-8 encoded,
+// without ever cutting a multi-byte character in half. Uses a binary search per boundary
+// so it stays fast even on multi-megabyte JSON strings (e.g. hundreds of bulk-uploaded
+// questions, or several base64-encoded PDFs/images).
+function splitStringByBytes(str, maxBytes){
+  const chunks = [];
+  let start = 0;
+  const len = str.length;
+  while(start < len){
+    let lo = start+1, hi = len, best = start+1;
+    while(lo <= hi){
+      const mid = Math.floor((lo+hi)/2);
+      if(utf8ByteLength(str.slice(start, mid)) <= maxBytes){ best = mid; lo = mid+1; } else { hi = mid-1; }
+    }
+    chunks.push(str.slice(start, best));
+    start = best;
+  }
+  return chunks;
+}
+
+// Writes one top-level key's value to Firestore, auto-chunking it across a `chunks`
+// subcollection whenever the serialized value is too big for a single document.
+async function writeKeyValue(key, value){
+  const ref = fbDB.collection(FS_COLLECTION).doc(key);
+  const chunksRef = ref.collection('chunks');
+  const clean = sanitizeForFirestore(value);
+  const json = JSON.stringify(clean);
+  const rev = Date.now();
+
+  // Check how many chunks this key previously had, so leftovers can be cleaned up.
+  let previousChunkCount = 0;
+  try{ const prevSnap = await ref.get(); if(prevSnap.exists){ previousChunkCount = prevSnap.data().chunkCount || 0; } }catch(e){}
+
+  if(utf8ByteLength(json) <= FS_MAX_DOC_BYTES){
+    await ref.set({ chunked:false, value: clean, chunkCount:0, rev });
+    if(previousChunkCount>0){
+      const cleanupBatch = fbDB.batch();
+      for(let i=0;i<previousChunkCount;i++) cleanupBatch.delete(chunksRef.doc('c'+i));
+      await cleanupBatch.commit().catch(()=>{});
+    }
+    return;
+  }
+
+  const parts = splitStringByBytes(json, FS_MAX_DOC_BYTES);
+  const batch = fbDB.batch();
+  batch.set(ref, { chunked:true, value:null, chunkCount:parts.length, rev });
+  parts.forEach((part,i)=> batch.set(chunksRef.doc('c'+i), { data:part }));
+  for(let i=parts.length; i<previousChunkCount; i++) batch.delete(chunksRef.doc('c'+i)); // drop now-unused old chunks
+  await batch.commit();
+}
+
+// Reads one top-level key's value back from Firestore, reassembling its chunks if needed.
+async function readKeyValue(key, fallback){
+  const ref = fbDB.collection(FS_COLLECTION).doc(key);
+  const snap = await ref.get();
+  if(!snap.exists) return fallback;
+  const d = snap.data();
+  if(!d.chunked) return ('value' in d) ? d.value : fallback;
+  const count = d.chunkCount||0;
+  if(count===0) return fallback;
+  const chunkSnaps = await Promise.all(Array.from({length:count}, (_,i)=> ref.collection('chunks').doc('c'+i).get()));
+  const json = chunkSnaps.map(s=> s.exists ? (s.data().data||'') : '').join('');
+  try{ return JSON.parse(json); }catch(e){ console.error('Failed to reassemble chunked data for '+key, e); return fallback; }
+}
 
 async function seedFirestoreFromScratch(){
   const seeded = seedDB();
-  const batch = fbDB.batch();
-  DB_KEYS.forEach(key=>{
-    const ref = fbDB.collection(FS_COLLECTION).doc(key);
-    batch.set(ref, { value: sanitizeForFirestore(seeded[key]) });
-  });
-  await batch.commit();
+  await Promise.all(DB_KEYS.map(key=> writeKeyValue(key, seeded[key])));
   return seeded;
 }
 async function loadDB(){
@@ -445,17 +513,10 @@ async function loadDB(){
       const seeded = await seedFirestoreFromScratch();
       return normalizeDB(seeded);
     }
-    const assembled = {};
     const seeded = seedDB(); // used only to backfill any keys/docs that don't exist yet
+    const assembled = {};
     await Promise.all(DB_KEYS.map(async (key)=>{
-      const snap = await fbDB.collection(FS_COLLECTION).doc(key).get();
-      if(snap.exists){
-        const data = snap.data();
-        assembled[key] = ('value' in data) ? data.value : seeded[key];
-      } else {
-        assembled[key] = seeded[key];
-        fbDB.collection(FS_COLLECTION).doc(key).set({ value: sanitizeForFirestore(seeded[key]) }).catch(()=>{});
-      }
+      assembled[key] = await readKeyValue(key, seeded[key]);
     }));
     return normalizeDB(assembled);
   }catch(e){
@@ -465,14 +526,9 @@ async function loadDB(){
 }
 function saveDB(){
   if(DEMO_MODE || !fbDB) return;
-  const batch = fbDB.batch();
-  DB_KEYS.forEach(key=>{
-    const ref = fbDB.collection(FS_COLLECTION).doc(key);
-    batch.set(ref, { value: sanitizeForFirestore(DB[key]) });
-  });
-  batch.commit().catch(err=>{
+  Promise.all(DB_KEYS.map(key=> writeKeyValue(key, DB[key]))).catch(err=>{
     console.error('Firestore save failed:', err);
-    alert('⚠ Could not sync your latest change to the cloud database. If you just uploaded a large PDF or image, it may exceed Firestore\'s 1MB per-document limit — try a smaller file or paste a direct URL instead.');
+    alert('⚠ Could not sync your latest change to the cloud database. Please check your internet connection and try again.');
   });
 }
 function isAdminPanelOpen(){ return !!document.getElementById('adminBody'); }
@@ -487,18 +543,19 @@ function handleRemoteDbChange(){
 function attachDbRealtimeListeners(){
   if(DEMO_MODE || !fbDB) return;
   DB_KEYS.forEach(key=>{
-    fbDB.collection(FS_COLLECTION).doc(key).onSnapshot(snap=>{
+    fbDB.collection(FS_COLLECTION).doc(key).onSnapshot(async (snap)=>{
       if(!snap.exists) return;
-      const data = snap.data();
-      const incoming = ('value' in data) ? data.value : DB[key];
-      // Compare against what we already have locally so we only re-render on a GENUINE
-      // change (from another admin/device). This also correctly ignores the snapshot
-      // that fires when Firestore confirms our own write, since that content already
-      // matches what we set locally — without this check, every save (even our own)
-      // would re-trigger a re-render and could wipe an admin form mid-edit.
-      const changed = JSON.stringify(DB[key]) !== JSON.stringify(incoming);
-      DB[key] = incoming;
-      if(changed) handleRemoteDbChange();
+      try{
+        const incoming = await readKeyValue(key, DB[key]);
+        // Compare against what we already have locally so we only re-render on a GENUINE
+        // change (from another admin/device). This also correctly ignores the snapshot
+        // that fires when Firestore confirms our own write, since that content already
+        // matches what we set locally — without this check, every save (even our own)
+        // would re-trigger a re-render and could wipe an admin form mid-edit.
+        const changed = JSON.stringify(DB[key]) !== JSON.stringify(incoming);
+        DB[key] = incoming;
+        if(changed) handleRemoteDbChange();
+      }catch(e){ console.warn('Live sync reassembly failed for '+key, e); }
     }, err=> console.warn('Live sync listener error for '+key+':', err));
   });
 }
@@ -568,49 +625,51 @@ function toggleTheme(){
 (function initTheme(){ const saved = localStorage.getItem('tce_theme'); if(saved==='light'){ document.documentElement.classList.remove('dark'); document.documentElement.classList.add('light'); } })();
 
 /* =========================================================================
-   HERO BANNERS — persisted in Firestore doc tce_app_data/heroBanners so the
-   Admin Banner Manager syncs live across every device/browser.
+   HERO BANNERS — persisted in Firestore doc tce_app_data/heroBanners (using
+   the same auto-chunking read/write helpers as the main DB) so the Admin
+   Banner Manager syncs live across every device/browser, and a slider full
+   of large uploaded images can never hit the 1MB document limit either.
 ========================================================================= */
 const BANNERS_DOC_ID = 'heroBanners';
+function defaultBannersFromDB(){
+  return (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
+}
 async function loadBanners(){
-  if(DEMO_MODE || !fbDB){
-    return (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
-  }
+  if(DEMO_MODE || !fbDB) return defaultBannersFromDB();
   try{
-    const snap = await fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).get();
-    if(snap.exists){
-      const data = snap.data();
-      if(Array.isArray(data.value) && data.value.length) return data.value;
-    }
+    const value = await readKeyValue(BANNERS_DOC_ID, null);
+    if(Array.isArray(value) && value.length) return value;
     // First-time setup: seed from the DB's default banners so existing slides aren't lost.
-    const seeded = (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
-    await fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).set({ value: sanitizeForFirestore(seeded) });
+    const seeded = defaultBannersFromDB();
+    await writeKeyValue(BANNERS_DOC_ID, seeded);
     return seeded;
   }catch(e){
     console.error('Could not load banners from Firestore, using local defaults.', e);
-    return (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
+    return defaultBannersFromDB();
   }
 }
 function saveBanners(){
   if(DEMO_MODE || !fbDB) return;
-  fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).set({ value: sanitizeForFirestore(BANNERS) }).catch(err=>{
+  writeKeyValue(BANNERS_DOC_ID, BANNERS).catch(err=>{
     console.error('Firestore banner save failed:', err);
-    alert('⚠ Could not sync this banner to the cloud database. If you uploaded a large image, it may exceed Firestore\'s 1MB per-document limit — try a smaller image or paste a direct URL instead.');
+    alert('⚠ Could not sync this banner to the cloud database. Please check your internet connection and try again.');
   });
 }
 function attachBannersRealtimeListener(){
   if(DEMO_MODE || !fbDB) return;
-  fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).onSnapshot(snap=>{
+  fbDB.collection(FS_COLLECTION).doc(BANNERS_DOC_ID).onSnapshot(async (snap)=>{
     if(!snap.exists) return;
-    const data = snap.data();
-    if(!Array.isArray(data.value)) return;
-    const changed = JSON.stringify(BANNERS) !== JSON.stringify(data.value);
-    BANNERS = data.value;
-    if(changed){
-      if(heroIdx>=BANNERS.length) heroIdx=0;
-      renderHero(); startHeroAuto();
-      if(isAdminPanelOpen()) renderAdminBody();
-    }
+    try{
+      const incoming = await readKeyValue(BANNERS_DOC_ID, BANNERS);
+      if(!Array.isArray(incoming)) return;
+      const changed = JSON.stringify(BANNERS) !== JSON.stringify(incoming);
+      BANNERS = incoming;
+      if(changed){
+        if(heroIdx>=BANNERS.length) heroIdx=0;
+        renderHero(); startHeroAuto();
+        if(isAdminPanelOpen()) renderAdminBody();
+      }
+    }catch(e){ console.warn('Live sync reassembly failed for banners', e); }
   }, err=> console.warn('Live sync listener error for banners:', err));
 }
 let BANNERS = [];
@@ -626,8 +685,8 @@ function renderHero(){
   if(heroIdx>=BANNERS.length) heroIdx=0;
   wrap.innerHTML = `<div id="heroTrack" class="absolute inset-0">` + BANNERS.map((b,i)=>`
     <div class="absolute inset-0 transition-opacity duration-700 ${i===heroIdx?'opacity-100':'opacity-0 pointer-events-none'}">
-      <div class="w-full h-full ${b.image?'':'bg-gradient-to-br '+(b.grad||'from-amber-600 via-yellow-500 to-orange-600')} flex items-center relative overflow-hidden">
-        ${b.image?`<img src="${b.image}" alt="${b.title||'Banner'}" class="absolute inset-0 w-full h-full object-cover"><div class="absolute inset-0 bg-black/45"></div>`:''}
+      <div class="w-full h-full ${b.image?'':'bg-gradient-to-br '+(b.grad||'from-amber-600 via-yellow-500 to-orange-600')} flex items-center relative overflow-hidden" ${b.image?'style="background:var(--panel)"':''}>
+        ${b.image?`<img src="${b.image}" alt="${b.title||'Banner'}" class="absolute inset-0 w-full h-full object-contain"><div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/40"></div>`:''}
         <div class="max-w-7xl mx-auto px-6 sm:px-10 w-full relative z-10">
           ${b.tag?`<span class="badge bg-black/30 text-white inline-block mb-3">${b.tag}</span>`:''}
           <h1 class="font-display font-800 text-3xl sm:text-5xl ${b.image?'text-white':'text-black'} max-w-xl leading-tight">${b.title||''}</h1>
@@ -703,7 +762,16 @@ function openModalWide(html){
   updateBackButtonVisibility();
   lucide.createIcons();
 }
-function closeModal(){ document.getElementById('modalRoot').innerHTML=''; updateBackButtonVisibility(); }
+function closeModal(){
+  document.getElementById('modalRoot').innerHTML='';
+  updateBackButtonVisibility();
+  // Whatever was open (admin panel, enrollment, banner/material upload, etc.) may have
+  // changed data — refresh the page underneath so changes appear immediately instead
+  // of only after a manual reload. Skip while a test/quiz is actually in progress.
+  if(!examState){
+    try{ renderNav(); renderTicker(); renderMentors(); renderTab(); }catch(e){ console.warn('Post-close refresh skipped:', e); }
+  }
+}
 
 /* =========================================================================
    GLOBAL BACK BUTTON & BROWSER HISTORY NAVIGATION
