@@ -119,12 +119,6 @@
 </head>
 <body class="no-tap-highlight">
 
-<!-- =============== BOOT LOADER (shown while initial data loads from Firestore) =============== -->
-<div id="bootLoader" class="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-4" style="background:var(--bg);">
-  <div class="w-14 h-14 rounded-2xl gold-grad flex items-center justify-center font-display font-800 text-ink text-2xl animate-pulse">T</div>
-  <p class="text-sm muted">Loading TCE - The Competitive Edge...</p>
-</div>
-
 <!-- =============== NAVBAR =============== -->
 <header class="sticky top-0 z-40 backdrop-blur-md" style="background:color-mix(in srgb, var(--bg) 88%, transparent); border-bottom:1px solid var(--border);">
   <div class="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-between h-16 gap-2">
@@ -2401,7 +2395,9 @@ function init(){
   updateBackButtonVisibility();
   lucide.createIcons();
 }
-function hideBootLoader(){ const el = document.getElementById('bootLoader'); if(el) el.remove(); }
+// Render instantly with local defaults, then silently swap in the live Firestore
+// data (and start real-time sync) in the background once it arrives — no loading screen.
+init();
 async function boot(){
   try{
     DB = await loadDB();
@@ -2413,8 +2409,10 @@ async function boot(){
     DB = normalizeDB(seedDB());
     BANNERS = (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
   }
-  hideBootLoader();
-  init();
+  renderNav(); renderHero(); startHeroAuto(); renderTicker(); renderMentors();
+  if(isAdminPanelOpen()) renderAdminBody();
+  else if(!document.getElementById('modalRoot').innerHTML.trim()) renderTab();
+  lucide.createIcons();
 }
 boot();
 </script>
