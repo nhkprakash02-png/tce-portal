@@ -158,8 +158,8 @@
   <div class="ticker-track" id="tickerText">Loading announcements...</div>
 </div>
 
-<!-- =============== HERO CAROUSEL =============== -->
-<section class="relative">
+<!-- =============== HERO CAROUSEL (homepage only) =============== -->
+<section id="heroSection" class="relative">
   <div id="heroCarousel" class="relative h-[340px] sm:h-[420px] overflow-hidden"></div>
   <div id="heroDots" class="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-20"></div>
 </section>
@@ -169,8 +169,8 @@
   <div id="tabContent"></div>
 </main>
 
-<!-- =============== MENTORS SECTION =============== -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+<!-- =============== MENTORS SECTION (homepage only) =============== -->
+<section id="mentorsSection" class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
   <div class="text-center mb-8">
     <p class="text-xs tracking-widest muted uppercase mb-1">Meet the team</p>
     <h2 class="font-display font-800 text-2xl sm:text-3xl">Our <span class="gold-text">Expert Mentors</span></h2>
@@ -255,6 +255,11 @@ if(!DEMO_MODE){
   try{ fbApp = firebase.initializeApp(firebaseConfig); fbAuth = firebase.auth(); fbDB = firebase.firestore(); fbStorage = firebase.storage(); }
   catch(e){ console.warn('Firebase init failed, using demo mode', e); }
 }
+// Tracks whether the real Firestore "batches" data has finished loading yet. Batches are
+// treated specially (unlike other sections) so the local seed/demo batches never flash on
+// screen before the admin's real, live data has arrived — if Firebase isn't configured at
+// all there's nothing to wait for, so this starts out already "ready" in that case.
+let batchesDataReady = (DEMO_MODE || !fbDB);
 
 /* =========================================================================
    ADMIN CREDENTIALS (password can be overridden via Admin Settings tab)
@@ -427,7 +432,30 @@ function normalizeDB(db){
 const FS_COLLECTION = 'tce_app_data';
 const DB_KEYS = ['examCategories','banners','ticker','students','mockTests','quizPool','pyqSets','submissions','materials','notices','inquiries','batches','mentors'];
 const FS_MAX_DOC_BYTES = 900000; // safety margin under Firestore's 1,048,576 byte/doc limit
-function sanitizeForFirestore(value){ return JSON.parse(JSON.stringify(value)); } // strips undefined/functions, guarantees plain JSON
+// Cloud Firestore rejects arrays that directly contain other arrays ("nested arrays are
+// not supported") — e.g. a batch's timetable stored as [["Mon","Math"],["Tue","GK"]].
+// This walks the data and transparently wraps any such inner array as a plain object
+// ({0:"Mon",1:"Math"}) instead, so a save can never fail for this reason again, for any
+// current or future field.
+function firestoreSafeArrays(value){
+  if(Array.isArray(value)){
+    return value.map(item=>{
+      if(Array.isArray(item)){
+        const obj = {};
+        item.forEach((v,i)=>{ obj[i] = firestoreSafeArrays(v); });
+        return obj;
+      }
+      return firestoreSafeArrays(item);
+    });
+  }
+  if(value && typeof value === 'object'){
+    const out = {};
+    Object.keys(value).forEach(k=>{ out[k] = firestoreSafeArrays(value[k]); });
+    return out;
+  }
+  return value;
+}
+function sanitizeForFirestore(value){ return firestoreSafeArrays(JSON.parse(JSON.stringify(value))); } // strips undefined/functions, guarantees plain JSON, and Firestore-proofs nested arrays
 function utf8ByteLength(str){ return new TextEncoder().encode(str).length; }
 
 // Splits `str` into pieces that are each guaranteed to be <= maxBytes when UTF-8 encoded,
@@ -605,14 +633,23 @@ function renderNav(){
 }
 function toggleMobileMenu(){ document.getElementById('mobileMenu').classList.toggle('hidden'); }
 function goHome(){ setTab('home'); }
+function updateHomeOnlySectionsVisibility(){
+  const isHome = activeTab==='home';
+  const hero = document.getElementById('heroSection');
+  const mentors = document.getElementById('mentorsSection');
+  if(hero) hero.classList.toggle('hidden', !isHome);
+  if(mentors) mentors.classList.toggle('hidden', !isHome);
+}
 function setTab(id){
   activeTab=id; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'});
   history.pushState({tab:id}, '', '#'+id);
   updateBackButtonVisibility();
+  updateHomeOnlySectionsVisibility();
 }
 function setTabFromHistory(id){
   activeTab=id; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'});
   updateBackButtonVisibility();
+  updateHomeOnlySectionsVisibility();
 }
 
 /* =========================================================================
@@ -685,9 +722,9 @@ function renderHero(){
   if(heroIdx>=BANNERS.length) heroIdx=0;
   wrap.innerHTML = `<div id="heroTrack" class="absolute inset-0">` + BANNERS.map((b,i)=>`
     <div class="absolute inset-0 transition-opacity duration-700 ${i===heroIdx?'opacity-100':'opacity-0 pointer-events-none'}">
-      <div class="w-full h-full ${b.image?'':'bg-gradient-to-br '+(b.grad||'from-amber-600 via-yellow-500 to-orange-600')} flex items-center relative overflow-hidden" ${b.image?'style="background:var(--panel)"':''}>
+      <div class="w-full h-full ${b.image?'':'bg-gradient-to-br '+(b.grad||'from-amber-600 via-yellow-500 to-orange-600')} flex items-end relative overflow-hidden" ${b.image?'style="background:var(--panel)"':''}>
         ${b.image?`<img src="${b.image}" alt="${b.title||'Banner'}" class="absolute inset-0 w-full h-full object-contain"><div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/40"></div>`:''}
-        <div class="max-w-7xl mx-auto px-6 sm:px-10 w-full relative z-10">
+        <div class="max-w-7xl mx-auto px-6 sm:px-10 w-full relative z-10 pb-10 sm:pb-14">
           ${b.tag?`<span class="badge bg-black/30 text-white inline-block mb-3">${b.tag}</span>`:''}
           <h1 class="font-display font-800 text-3xl sm:text-5xl ${b.image?'text-white':'text-black'} max-w-xl leading-tight">${b.title||''}</h1>
           <p class="${b.image?'text-white/85':'text-black/80'} mt-3 max-w-md text-sm sm:text-base font-medium">${b.subtitle||''}</p>
@@ -727,7 +764,18 @@ function attachHeroSwipe(){
     heroTouchStartX=null; heroTouchStartY=null;
   }, {passive:true});
 }
-function renderTicker(){ document.getElementById('tickerText').textContent = DB.ticker; }
+function renderTicker(){
+  const el = document.getElementById('tickerText');
+  if(!el) return;
+  const newText = DB.ticker;
+  if(el.textContent === newText) return; // nothing changed — leave the running animation completely alone
+  el.textContent = newText;
+  // If the text actually changed mid-animation (e.g. once live Firestore data arrives),
+  // cleanly restart the marquee from the beginning instead of letting it jump/stutter.
+  el.style.animation = 'none';
+  void el.offsetWidth; // force a reflow so the animation restart takes effect
+  el.style.animation = '';
+}
 
 /* =========================================================================
    MENTORS (Admin Managed)
@@ -980,6 +1028,17 @@ function renderTab(){
 }
 
 /* ---------- HOME ---------- */
+function batchLoadingSkeletonHtml(count, tall){
+  return Array.from({length:count}).map(()=>`
+    <div class="card glow-border rounded-2xl p-5 animate-pulse ${tall?'h-56':''}">
+      <div class="h-4 w-2/3 rounded bg-white/10 mb-3"></div>
+      <div class="h-6 w-1/3 rounded bg-white/10 mb-4"></div>
+      <div class="h-3 w-full rounded bg-white/10 mb-2"></div>
+      <div class="h-3 w-5/6 rounded bg-white/10 mb-2"></div>
+      <div class="h-3 w-2/3 rounded bg-white/10 mb-4"></div>
+      <div class="h-9 w-full rounded-lg bg-white/10"></div>
+    </div>`).join('');
+}
 function tplHome(){
   return `
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
@@ -998,7 +1057,7 @@ function tplHome(){
   <div class="mb-10">
     <h3 class="font-display font-700 text-lg mb-3">Our Batches</h3>
     <div class="grid sm:grid-cols-2 gap-4">
-      ${DB.batches.filter(b=>b.active).map(b=>`
+      ${!batchesDataReady ? batchLoadingSkeletonHtml(2) : (DB.batches.filter(b=>b.active).length ? DB.batches.filter(b=>b.active).map(b=>`
         <div class="card glow-border rounded-2xl p-5 flex flex-col">
           <div class="flex items-start justify-between gap-2 mb-1">
             <h4 class="font-display font-700 text-sm">${b.name}</h4>
@@ -1007,7 +1066,7 @@ function tplHome(){
           <p class="gold-text font-display font-800 text-xl mb-3">${priceLabel(b.price)}</p>
           <ul class="text-xs muted space-y-1 mb-4">${b.features.slice(0,3).map(f=>`<li class="flex gap-1.5 items-center"><i data-lucide="check" class="w-3 h-3 gold-text"></i>${f}</li>`).join('')}</ul>
           <button onclick="openEnrollModal('batch','${b.id}')" class="mt-auto btn-gold rounded-lg py-2 text-xs font-bold">Enroll Now</button>
-        </div>`).join('')}
+        </div>`).join('') : '<p class="muted text-sm col-span-full">No active batches available right now.</p>')}
     </div>
   </div>
 
@@ -1697,7 +1756,7 @@ function tplBatches(){
     <p class="muted text-sm">Choose a batch and enroll instantly via UPI.</p>
   </div>
   <div class="space-y-6">
-    ${DB.batches.filter(b=>b.active).map(b=>`
+    ${!batchesDataReady ? batchLoadingSkeletonHtml(2, true) : (DB.batches.filter(b=>b.active).length ? DB.batches.filter(b=>b.active).map(b=>`
     <div class="card glow-border rounded-2xl overflow-hidden">
       <div class="gold-grad p-6 sm:p-8">
         <span class="badge bg-black/20 text-black inline-block mb-2">Featured Batch${b.examCategory && b.examCategory!=='All Exams' ? ' • '+b.examCategory : ''}</span>
@@ -1711,7 +1770,7 @@ function tplBatches(){
       <div class="px-6 sm:px-8 pb-8">
         <button onclick="openEnrollModal('batch','${b.id}')" class="w-full sm:w-auto btn-gold rounded-lg px-8 py-3 text-sm font-bold">Enroll Now — ${priceLabel(b.price)}</button>
       </div>
-    </div>`).join('')}
+    </div>`).join('') : '<p class="muted text-sm">No active batches available right now. Please check back soon.</p>')}
   </div>`;
 }
 
@@ -2495,12 +2554,14 @@ async function boot(){
   try{
     DB = await loadDB();
     BANNERS = await loadBanners();
+    batchesDataReady = true;
     attachDbRealtimeListeners();
     attachBannersRealtimeListener();
   }catch(e){
     console.error('Startup data load failed, falling back to local demo data only (nothing will be saved).', e);
     DB = normalizeDB(seedDB());
     BANNERS = (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
+    batchesDataReady = true; // nothing more is coming — show whatever we have rather than loading forever
   }
   renderNav(); renderHero(); startHeroAuto(); renderTicker(); renderMentors();
   if(isAdminPanelOpen()) renderAdminBody();
