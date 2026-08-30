@@ -744,6 +744,15 @@ function startHeroAuto(){
   heroTimer = setInterval(()=>{ heroIdx=(heroIdx+1)%BANNERS.length; renderHero(); }, 4500);
 }
 let heroTouchStartX=null, heroTouchStartY=null;
+// One-time check for a real uploaded logo.png so the exam watermark can use it when present,
+// falling back to the plain "TCE" text pattern otherwise (never blocks rendering — just upgrades it).
+let logoAvailable = false;
+(function checkLogoAvailability(){
+  const img = new Image();
+  img.onload = ()=>{ logoAvailable = true; };
+  img.onerror = ()=>{ logoAvailable = false; };
+  img.src = 'logo.png';
+})();
 function attachHeroSwipe(){
   const el = document.getElementById('heroCarousel');
   if(!el || el.dataset.swipeBound) return;
@@ -1213,32 +1222,57 @@ function showPreExamInstructions(testId, source, subject){
       <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Exam Instructions</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
       <div class="card2 rounded-xl p-4 mb-4 text-sm space-y-2">
         <p><b>Test:</b> ${test.title}</p>
+        <p><b>Candidate:</b> ${user.name} ${user.phone?('| '+user.phone):''}</p>
         <p><b>Total Questions:</b> ${test.questions.length}</p>
         <p><b>Duration:</b> ${test.durationMin} minutes</p>
         <p><b>Total Marks:</b> ${+(test.questions.length*test.marksCorrect).toFixed(2)}</p>
         <p><b>Marking Scheme:</b> <span class="text-emerald-400">+${test.marksCorrect}</span> for correct, <span class="text-red-400">-${test.marksWrong}</span> for wrong</p>
       </div>
-      <ul class="text-xs muted space-y-1.5 mb-5 list-disc pl-4">
+      <ul class="text-xs muted space-y-1.5 mb-4 list-disc pl-4">
         <li>The exam will open in full-screen mode for an authentic CBT experience.</li>
         <li>Switching tabs or exiting full-screen will trigger a warning; 3 violations auto-submit your test.</li>
         <li>Use "Save & Next", "Mark for Review & Next" and "Clear Response" to navigate.</li>
         <li>Your answers auto-save — you can resume if your browser refreshes or disconnects.</li>
-        <li>The timer starts the instant you click "Start Test Now" and cannot be paused.</li>
+        <li>The timer starts the instant you begin and cannot be paused.</li>
       </ul>
-      ${hasResume? `<button onclick="resumeExam()" class="w-full btn-gold rounded-lg py-3 text-sm font-bold mb-2 flex items-center justify-center gap-2"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>Resume Previous Attempt</button>
-      <button onclick="beginExam('${testId}','${source}','${subject||''}')" class="w-full btn-ghost rounded-lg py-2.5 text-xs font-bold">Start Fresh Instead (discards saved progress)</button>`
-      : `<button onclick="beginExam('${testId}','${source}','${subject||''}')" class="w-full btn-gold rounded-lg py-3 text-sm font-bold flex items-center justify-center gap-2"><i data-lucide="play" class="w-4 h-4"></i>Start Test Now</button>`}
+      <div class="mb-4">
+        <label class="text-xs font-bold muted uppercase block mb-1.5">Choose your default language</label>
+        <select id="instrLangSelect" class="w-full rounded-lg px-3 py-2.5 text-sm">
+          <option value="en">English</option>
+          <option value="bn">বাংলা (Bengali)</option>
+          <option value="hi">हिन्दी (Hindi)</option>
+        </select>
+      </div>
+      <label class="flex items-start gap-2.5 mb-5 cursor-pointer">
+        <input type="checkbox" id="instrAgreeCheckbox" onchange="updateBeginButtonState()" class="w-4 h-4 mt-0.5 accent-amber-500 shrink-0">
+        <span class="text-xs muted">I have understood and agree to all the instructions.</span>
+      </label>
+      ${hasResume? `<button id="instrBeginBtn" disabled onclick="resumeExam()" class="w-full btn-gold rounded-lg py-3 text-sm font-bold mb-2 flex items-center justify-center gap-2 opacity-40 cursor-not-allowed"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>Resume Previous Attempt</button>
+      <button id="instrFreshBtn" disabled onclick="beginExam('${testId}','${source}','${subject||''}')" class="w-full btn-ghost rounded-lg py-2.5 text-xs font-bold opacity-40 cursor-not-allowed">Start Fresh Instead (discards saved progress)</button>`
+      : `<button id="instrBeginBtn" disabled onclick="beginExam('${testId}','${source}','${subject||''}')" class="w-full btn-gold rounded-lg py-3 text-sm font-bold flex items-center justify-center gap-2 opacity-40 cursor-not-allowed"><i data-lucide="play" class="w-4 h-4"></i>I am ready to begin</button>`}
     </div>`);
 }
+function updateBeginButtonState(){
+  const checked = document.getElementById('instrAgreeCheckbox') && document.getElementById('instrAgreeCheckbox').checked;
+  ['instrBeginBtn','instrFreshBtn'].forEach(id=>{
+    const btn = document.getElementById(id); if(!btn) return;
+    btn.disabled = !checked;
+    btn.classList.toggle('opacity-40', !checked);
+    btn.classList.toggle('cursor-not-allowed', !checked);
+  });
+}
+function getSelectedInstrLang(){ const el = document.getElementById('instrLangSelect'); return el ? el.value : 'en'; }
 function beginExam(testId, source, subject){
   const test = findTestById(testId, source, subject);
   if(!test) return;
+  const chosenLang = getSelectedInstrLang();
   const shuffledQ = shuffle(test.questions).map(q=>({...q, options: shuffle(q.options)}));
   examState = {
     testId: test.id, source, subject: subject||test.subject||'pyq', title: test.title, durationSec: test.durationMin*60, remaining: test.durationMin*60,
     marksCorrect: test.marksCorrect, marksWrong: test.marksWrong, questions: shuffledQ,
     answers: new Array(shuffledQ.length).fill(null), status: new Array(shuffledQ.length).fill('not-visited'),
-    current: 0, violations: 0, lang: 'en', timer:null, startedAt: Date.now()
+    timeSpent: new Array(shuffledQ.length).fill(0), questionEnteredAt: Date.now(),
+    current: 0, violations: 0, lang: chosenLang, timer:null, startedAt: Date.now()
   };
   examState.status[0]='not-answered';
   closeModal();
@@ -1252,6 +1286,8 @@ function resumeExam(){
   const rk = resumeKey(); if(!rk) return;
   let data; try{ data = JSON.parse(localStorage.getItem(rk)); }catch(e){ return; }
   if(!data) return;
+  if(!Array.isArray(data.timeSpent)) data.timeSpent = new Array(data.questions.length).fill(0); // backward-compat with older saved progress
+  data.questionEnteredAt = Date.now();
   examState = data;
   closeModal();
   renderExamScreen();
@@ -1280,7 +1316,7 @@ function renderExamScreen(){
     <div class="flex items-center justify-between px-4 py-3 card2" style="border-bottom:1px solid var(--border)">
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg gold-grad flex items-center justify-center font-display font-800 text-ink text-sm">T</div>
-        <div><p class="text-xs font-semibold">${st.title}</p><p class="text-[10px] muted">Candidate: ${getCurrentUser().name}</p></div>
+        <div><p class="text-xs font-semibold">TCE — ${st.title}</p><p class="text-[10px] muted">Candidate: ${getCurrentUser().name}</p></div>
       </div>
       <div class="flex items-center gap-3">
         ${hasBn?`<button onclick="toggleExamLang()" class="btn-ghost rounded-md px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1"><i data-lucide="languages" class="w-3.5 h-3.5"></i>${st.lang==='en'?'EN':'BN'}</button>`:''}
@@ -1288,8 +1324,8 @@ function renderExamScreen(){
         <button onclick="toggleFullscreen()" class="btn-ghost rounded-md px-2.5 py-1.5 text-[11px] font-bold flex items-center gap-1"><i data-lucide="maximize" class="w-3.5 h-3.5"></i></button>
       </div>
     </div>
-    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-      <div class="flex-1 overflow-y-auto p-5 sm:p-8 watermark-wrap wm-fallback relative">
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <div class="flex-1 overflow-y-auto p-5 sm:p-8 watermark-wrap ${logoAvailable?'':'wm-fallback'} relative">
         <div class="relative z-10 max-w-2xl mx-auto">
           <div class="flex justify-between items-center mb-4">
             <span class="text-xs muted">Question <span class="gold-text font-bold">${st.current+1}</span> of ${st.questions.length}</span>
@@ -1299,8 +1335,16 @@ function renderExamScreen(){
           <div id="examOptions" class="space-y-3"></div>
         </div>
       </div>
-      <div class="w-full lg:w-72 shrink-0 card2 p-4 overflow-y-auto" style="border-left:1px solid var(--border)">
-        <p class="text-xs font-bold muted uppercase mb-3">Question Palette</p>
+
+      <!-- Backdrop for the mobile/compact-landscape palette drawer -->
+      <div id="examPaletteBackdrop" onclick="toggleExamPaletteDrawer(false)" class="hidden lg:hidden fixed inset-0 bg-black/60 z-[78]"></div>
+
+      <div id="examPaletteDrawer" class="w-full lg:w-72 shrink-0 card2 p-4 overflow-y-auto fixed lg:relative inset-y-0 right-0 z-[79] lg:z-auto translate-x-full lg:translate-x-0 transition-transform duration-300 ease-out" style="border-left:1px solid var(--border); max-width:85vw;">
+        <div class="flex items-center justify-between mb-3 lg:hidden">
+          <p class="text-xs font-bold muted uppercase">Question Palette</p>
+          <button onclick="toggleExamPaletteDrawer(false)" class="w-7 h-7 rounded-full btn-ghost flex items-center justify-center"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <p class="text-xs font-bold muted uppercase mb-3 hidden lg:block">Question Palette</p>
         <div class="grid grid-cols-5 gap-2 mb-4" id="examPalette"></div>
         <div class="space-y-1.5 text-[11px]">
           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span>Answered</div>
@@ -1311,6 +1355,11 @@ function renderExamScreen(){
         </div>
         <button onclick="confirmSubmitExam()" class="w-full mt-5 rounded-lg py-2.5 text-xs font-bold bg-red-600 text-white">Submit Test</button>
       </div>
+
+      <!-- Hamburger toggle: only shown below the lg breakpoint, opens the palette as a sliding drawer -->
+      <button onclick="toggleExamPaletteDrawer(true)" class="lg:hidden fixed bottom-24 right-4 z-[77] w-12 h-12 rounded-full btn-gold shadow-lg flex items-center justify-center" title="Question Palette">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
     </div>
     <div class="flex flex-wrap gap-2 justify-between px-4 py-3 card2" style="border-top:1px solid var(--border)">
       <button onclick="examNav(-1)" class="btn-ghost rounded-lg px-4 py-2 text-xs font-bold">Previous</button>
@@ -1323,6 +1372,14 @@ function renderExamScreen(){
   </div>
   <div id="examWarnRoot"></div>`;
   renderExamQuestion(); renderPalette();
+  lucide.createIcons();
+}
+function toggleExamPaletteDrawer(open){
+  const drawer = document.getElementById('examPaletteDrawer');
+  const backdrop = document.getElementById('examPaletteBackdrop');
+  if(!drawer) return;
+  if(open){ drawer.classList.remove('translate-x-full'); if(backdrop){ backdrop.classList.remove('hidden'); } }
+  else{ drawer.classList.add('translate-x-full'); if(backdrop){ backdrop.classList.add('hidden'); } }
 }
 function renderExamQuestion(){
   const st = examState; const q = st.questions[st.current];
@@ -1357,7 +1414,16 @@ function saveAndNext(){
   goToQuestion(Math.min(st.current+1, st.questions.length-1)); saveExamProgress();
 }
 function examNav(delta){ goToQuestion(Math.max(0, Math.min(examState.current+delta, examState.questions.length-1))); }
-function goToQuestion(idx){ const st = examState; if(st.status[idx]==='not-visited') st.status[idx]='not-answered'; st.current = idx; renderExamQuestion(); renderPalette(); }
+function goToQuestion(idx){
+  const st = examState;
+  const now = Date.now();
+  if(st.questionEnteredAt!=null){ st.timeSpent[st.current] = (st.timeSpent[st.current]||0) + Math.max(0, Math.round((now-st.questionEnteredAt)/1000)); }
+  st.questionEnteredAt = now;
+  if(st.status[idx]==='not-visited') st.status[idx]='not-answered';
+  st.current = idx;
+  renderExamQuestion(); renderPalette();
+  toggleExamPaletteDrawer(false); // close the mobile drawer once a question is picked
+}
 function renderPalette(){
   const st = examState;
   const colors = {'not-visited':'bg-gray-500 text-white','not-answered':'bg-red-500 text-white','answered':'bg-emerald-500 text-ink','marked':'bg-purple-500 text-white','answered-marked':'bg-purple-500 text-white'};
@@ -1429,6 +1495,8 @@ function finishExam(autoTimeout, autoViolation){
   if(!examState) return;
   clearInterval(examState.timer); detachAntiCheat();
   const st = examState;
+  // Flush the time spent on whichever question was open when the test ended.
+  if(st.questionEnteredAt!=null){ st.timeSpent[st.current] = (st.timeSpent[st.current]||0) + Math.max(0, Math.round((Date.now()-st.questionEnteredAt)/1000)); st.questionEnteredAt=null; }
   let correct=0, wrong=0, unanswered=0;
   st.questions.forEach((q,i)=>{
     if(st.answers[i]===null || st.answers[i]===undefined) unanswered++;
@@ -1442,8 +1510,8 @@ function finishExam(autoTimeout, autoViolation){
   const timeTakenSec = st.durationSec-st.remaining;
   const submission = {
     id: uid('sub'), testId: st.testId, testType: st.source||'mock', subject: st.subject, testTitle: st.title, studentId: user.id, studentName: user.name, studentPhone: user.phone||'',
-    attempt: attemptNo, score, maxScore, correct, wrong, unanswered, accuracy, timeTakenSec, date: new Date().toISOString(),
-    detail: st.questions.map((q,i)=>({q, given: st.answers[i]}))
+    attempt: attemptNo, score, maxScore, correct, wrong, unanswered, accuracy, timeTakenSec, durationSec: st.durationSec, date: new Date().toISOString(),
+    detail: st.questions.map((q,i)=>({q, given: st.answers[i], timeSpent: st.timeSpent[i]||0}))
   };
   DB.submissions.push(submission); saveDB(); clearExamProgress();
   if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
@@ -1451,11 +1519,27 @@ function finishExam(autoTimeout, autoViolation){
   examState = null;
 }
 
+function sectionDisplayName(subject){
+  const map = {math:'Elementary Mathematics', english:'English Language', reasoning:'General Reasoning', gk:'General Knowledge', full:'Combined Section', quiz:'General Knowledge', pyq:'Previous Year Section'};
+  return map[subject] || (subject? subject.charAt(0).toUpperCase()+subject.slice(1) : 'Section');
+}
 function renderResultScreen(sub, autoTimeout, autoViolation){
   const leaderboard = DB.submissions.filter(s=>s.testId===sub.testId)
     .reduce((acc,s)=>{ const ex=acc.find(a=>a.studentId===s.studentId); if(!ex||s.score>ex.score){ acc=acc.filter(a=>a.studentId!==s.studentId); acc.push(s); } return acc; },[])
     .sort((a,b)=>b.score-a.score);
   const rank = leaderboard.findIndex(s=>s.id===sub.id)+1;
+  const attempted = sub.correct + sub.wrong;
+  const percentile = leaderboard.length>1 ? (((leaderboard.length - rank) / (leaderboard.length-1)) * 100).toFixed(1) : '100.0';
+  const cutoff = +(sub.maxScore*0.33).toFixed(2);
+  const cutoffGap = +(sub.score - cutoff).toFixed(2);
+  const topper = leaderboard[0] || sub;
+  const avgScore = +(leaderboard.reduce((a,s)=>a+s.score,0)/leaderboard.length).toFixed(2);
+  const avgAccuracy = +(leaderboard.reduce((a,s)=>a+s.accuracy,0)/leaderboard.length).toFixed(1);
+  const avgCorrect = Math.round(leaderboard.reduce((a,s)=>a+s.correct,0)/leaderboard.length);
+  const avgWrong = Math.round(leaderboard.reduce((a,s)=>a+s.wrong,0)/leaderboard.length);
+  const avgTime = Math.round(leaderboard.reduce((a,s)=>a+(s.timeTakenSec||0),0)/leaderboard.length);
+  const fmtTime = (secs)=>{ const m=Math.floor((secs||0)/60), s=(secs||0)%60; return `${m}:${String(s).padStart(2,'0')}`; };
+  const weak = sub.accuracy < 50;
   history.pushState({modal:true, tab:activeTab, exam:true}, '', location.hash||('#'+activeTab));
   updateBackButtonVisibility();
   document.getElementById('modalRoot').innerHTML = `
@@ -1463,22 +1547,57 @@ function renderResultScreen(sub, autoTimeout, autoViolation){
     <div class="max-w-3xl mx-auto px-4 py-10">
       ${autoTimeout?'<div class="mb-4 text-center text-xs bg-amber-500/15 gold-text rounded-lg py-2">⏱ Time up — test auto-submitted.</div>':''}
       ${autoViolation?'<div class="mb-4 text-center text-xs bg-red-500/15 text-red-400 rounded-lg py-2">⚠ Auto-submitted after 3 tab-switch violations.</div>':''}
-      <div class="text-center mb-8" id="scorecardArea">
+      <div class="text-center mb-6" id="scorecardArea">
         <i data-lucide="trophy" class="w-12 h-12 gold-text mx-auto mb-2"></i>
-        <h2 class="font-display font-800 text-2xl">${sub.testTitle}</h2>
-        <p class="muted text-sm">Attempt #${sub.attempt} — TCE The Competitive Edge</p>
+        <h2 class="font-display font-800 text-2xl">TCE — ${sub.testTitle}</h2>
+        <p class="muted text-sm">Attempt #${sub.attempt} — Overall Performance Summary</p>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        ${[['Score', sub.score+' / '+sub.maxScore],['Accuracy', sub.accuracy+'%'],['Correct', sub.correct],['Wrong', sub.wrong]]
-          .map(c=>`<div class="card glow-border rounded-xl p-4 text-center"><p class="text-[10px] muted uppercase">${c[0]}</p><p class="font-display font-800 text-xl gold-text mt-1">${c[1]}</p></div>`).join('')}
+
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        ${[['Rank','#'+rank],['Score', sub.score+' / '+sub.maxScore],['Attempted', attempted+' / '+sub.detail.length],['Accuracy', sub.accuracy+'%'],['Percentile', percentile+'%']]
+          .map(c=>`<div class="card glow-border rounded-xl p-4 text-center"><p class="text-[10px] muted uppercase">${c[0]}</p><p class="font-display font-800 text-lg gold-text mt-1">${c[1]}</p></div>`).join('')}
       </div>
+
+      <div class="card glow-border rounded-2xl p-5 mb-6 flex items-center gap-4 flex-wrap">
+        <div class="w-12 h-12 rounded-full ${cutoffGap>=0?'bg-emerald-500/20':'bg-red-500/20'} flex items-center justify-center shrink-0">
+          <i data-lucide="${cutoffGap>=0?'trending-up':'trending-down'}" class="w-6 h-6 ${cutoffGap>=0?'text-emerald-400':'text-red-400'}"></i>
+        </div>
+        <p class="text-sm sm:text-base font-semibold">You scored <span class="${cutoffGap>=0?'text-emerald-400':'text-red-400'} font-bold">${Math.abs(cutoffGap)} Marks</span> ${cutoffGap>=0?'more':'less'} than the estimated cutoff (${cutoff})!</p>
+      </div>
+
+      ${weak?`<div class="card glow-border rounded-2xl p-5 mb-6 flex items-center gap-4 flex-wrap" style="border-color:rgba(245,158,11,0.5)">
+        <i data-lucide="alert-triangle" class="w-8 h-8 text-amber-400 shrink-0"></i>
+        <div><p class="font-semibold text-sm">Strong basics can instantly lift your score!</p><p class="text-xs muted mt-0.5">Revisit this section's weak topics and re-attempt the test to build accuracy.</p></div>
+      </div>`:`<div class="card glow-border rounded-2xl p-5 mb-6 flex items-center gap-4 flex-wrap" style="border-color:rgba(16,185,129,0.5)">
+        <i data-lucide="check-circle-2" class="w-8 h-8 text-emerald-400 shrink-0"></i>
+        <div><p class="font-semibold text-sm">Strong performance!</p><p class="text-xs muted mt-0.5">Your accuracy is solid — keep practicing to climb further up the leaderboard.</p></div>
+      </div>`}
+
       <div class="card glow-border rounded-2xl p-5 mb-6">
-        <h3 class="font-display font-700 text-sm mb-4">🏆 Live Leaderboard — Your Rank: <span class="gold-text">#${rank}</span></h3>
+        <h3 class="font-display font-700 text-sm mb-4">Sectional Summary — ${sectionDisplayName(sub.subject)}</h3>
         <div class="overflow-x-auto"><table class="w-full text-xs">
-          <thead><tr class="muted text-left"><th class="py-1.5">Rank</th><th>Student</th><th>Score</th><th>Accuracy</th></tr></thead>
-          <tbody>${leaderboard.slice(0,10).map((s,i)=>`<tr class="${s.id===sub.id?'gold-text font-bold':''}" style="border-top:1px solid var(--border)"><td class="py-1.5">${i+1}</td><td>${s.studentName}</td><td>${s.score}</td><td>${s.accuracy}%</td></tr>`).join('')}</tbody>
+          <thead><tr class="muted text-left"><th class="py-1.5"></th><th>Score</th><th>Accuracy</th><th>Correct</th><th>Wrong</th><th>Time</th></tr></thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)"><td class="py-1.5 font-semibold">You</td><td>${sub.score}/${sub.maxScore}</td><td>${sub.accuracy}%</td><td class="text-emerald-400">${sub.correct}</td><td class="text-red-400">${sub.wrong}</td><td>${fmtTime(sub.timeTakenSec)}</td></tr>
+            <tr style="border-top:1px solid var(--border)"><td class="py-1.5 font-semibold gold-text">Topper</td><td>${topper.score}/${sub.maxScore}</td><td>${topper.accuracy}%</td><td class="text-emerald-400">${topper.correct}</td><td class="text-red-400">${topper.wrong}</td><td>${fmtTime(topper.timeTakenSec)}</td></tr>
+            <tr style="border-top:1px solid var(--border)"><td class="py-1.5 font-semibold muted">Average</td><td>${avgScore}/${sub.maxScore}</td><td>${avgAccuracy}%</td><td class="text-emerald-400">${avgCorrect}</td><td class="text-red-400">${avgWrong}</td><td>${fmtTime(avgTime)}</td></tr>
+          </tbody>
         </table></div>
       </div>
+
+      <div class="card glow-border rounded-2xl p-5 mb-6">
+        <h3 class="font-display font-700 text-sm mb-4">🏆 Top Rankers — Your Rank: <span class="gold-text">#${rank}</span></h3>
+        <div class="space-y-2">
+          ${leaderboard.slice(0,10).map((s,i)=>`
+            <div class="flex items-center gap-3 ${s.id===sub.id?'card2 rounded-lg px-2 py-1.5':'px-2 py-1.5'}">
+              <span class="w-6 text-xs font-bold ${i<3?'gold-text':'muted'}">${i+1}.</span>
+              <div class="w-8 h-8 rounded-full gold-grad flex items-center justify-center text-ink text-xs font-bold shrink-0">${(s.studentName||'?')[0]}</div>
+              <span class="text-xs flex-1 ${s.id===sub.id?'font-bold':''}">${s.studentName}${s.id===sub.id?' (You)':''}</span>
+              <span class="text-xs gold-text font-semibold">${s.score}/${sub.maxScore}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+
       <div class="flex flex-wrap gap-3 justify-center mb-4">
         <button onclick="downloadScorecard('${sub.id}', ${rank})" class="btn-ghost rounded-lg px-5 py-2.5 text-xs font-bold flex items-center gap-1.5"><i data-lucide="image-down" class="w-3.5 h-3.5"></i>Download Scorecard</button>
         <button onclick="shareScorecardWhatsApp('${sub.id}', ${rank})" class="rounded-lg px-5 py-2.5 text-xs font-bold bg-[#25D366] text-white flex items-center gap-1.5"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i>Share on WhatsApp</button>
@@ -1497,42 +1616,215 @@ function reAttemptFromResult(subId){
   if(!sub) return;
   showPreExamInstructions(sub.testId, sub.testType==='pyq'?'pyq':'mock', sub.subject);
 }
-let reviewFilterMode = 'all';
-function reviewSolutions(subId){
-  const sub = DB.submissions.find(s=>s.id===subId);
-  openModalWide(renderReviewHtml(sub));
+
+/* =========================================================================
+   SOLUTION / RE-ATTEMPT REVIEW PANEL (desktop sidebar + mobile drawer)
+========================================================================= */
+let reviewSubId=null, reviewCurrent=0, reviewViewMode='single', reviewReattemptMode=false, reviewLocalAnswers={}, reviewShowSolution=false;
+function currentReviewSub(){ return DB.submissions.find(s=>s.id===reviewSubId); }
+function computeCommunityAccuracy(testId, questionId){
+  const subs = DB.submissions.filter(s=>s.testId===testId);
+  let attempted=0, correct=0;
+  subs.forEach(s=>{
+    const d = (s.detail||[]).find(x=>x.q && x.q.id===questionId);
+    if(d && d.given){ attempted++; if(d.given===d.q.correct) correct++; }
+  });
+  return attempted>0 ? Math.round((correct/attempted)*100) : null;
 }
-function renderReviewHtml(sub){
-  let items = sub.detail;
-  if(reviewFilterMode==='incorrect') items = items.filter(d=> d.given && d.given!==d.q.correct);
-  else if(reviewFilterMode==='unattempted') items = items.filter(d=> !d.given);
-  return `
-  <div class="card p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="font-display font-700 text-lg">Review — ${sub.testTitle} (Attempt #${sub.attempt})</h3>
-      <button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button>
+function classifySpeed(timeSpent, expectedPerQ, isCorrect, attempted){
+  if(!attempted) return null;
+  const ratio = expectedPerQ>0 ? timeSpent/expectedPerQ : 1;
+  if(isCorrect){
+    if(ratio<=0.6) return {label:'Superfast', icon:'zap', color:'text-emerald-400'};
+    if(ratio<=1.4) return {label:'On Time', icon:'check-circle', color:'text-sky-400'};
+    return {label:'Slow', icon:'clock', color:'text-amber-400'};
+  }
+  if(ratio<=1.4) return {label:'On Time but not Correct', icon:'alert-circle', color:'text-red-400'};
+  return {label:'Slow', icon:'clock', color:'text-amber-400'};
+}
+function fmtReviewTime(secs){ const m=Math.floor((secs||0)/60), s=Math.round((secs||0)%60); return `${m}:${String(s).padStart(2,'0')}`; }
+
+function reviewSolutions(subId){
+  reviewSubId = subId; reviewCurrent = 0; reviewViewMode='single'; reviewReattemptMode = false; reviewLocalAnswers = {}; reviewShowSolution = false;
+  renderReviewScreen();
+}
+function renderReviewScreen(){
+  const sub = currentReviewSub(); if(!sub) return;
+  history.pushState({modal:true, tab:activeTab, exam:true}, '', location.hash||('#'+activeTab));
+  updateBackButtonVisibility();
+  const correctCount = sub.detail.filter(d=>d.given && d.given===d.q.correct).length;
+  const incorrectCount = sub.detail.filter(d=>d.given && d.given!==d.q.correct).length;
+  const unattemptedCount = sub.detail.filter(d=>!d.given).length;
+  document.getElementById('modalRoot').innerHTML = `
+  <div class="fixed inset-0 z-50 bg-[var(--bg)] flex flex-col" id="reviewRoot">
+    <div class="flex items-center justify-between px-4 py-3 gold-grad">
+      <div class="flex items-center gap-3">
+        <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-black/20 flex items-center justify-center shrink-0"><i data-lucide="arrow-left" class="w-4 h-4 text-black"></i></button>
+        <div class="min-w-0"><p class="text-xs font-bold text-black">Tests</p><p class="text-[11px] text-black/70 truncate">TCE — ${sub.testTitle}</p></div>
+      </div>
+      <button onclick="closeModal();renderResultScreen(currentReviewSub())" class="text-[11px] font-bold text-black shrink-0">ANALYTICS</button>
     </div>
-    <div class="flex gap-2 mb-4">
-      ${[['all','All Questions'],['incorrect','Incorrect Only'],['unattempted','Unattempted Only']].map(f=>`
-        <button onclick="reviewFilterMode='${f[0]}';document.getElementById('modalRoot').innerHTML='';openModalWide(renderReviewHtml(DB.submissions.find(s=>s.id==='${sub.id}')))" class="px-3 py-1.5 rounded-lg text-xs font-bold ${reviewFilterMode===f[0]?'tab-active':'card2 muted'}">${f[1]}</button>`).join('')}
-    </div>
-    <div class="space-y-4">
-    ${items.length? items.map((d,i)=>{
-      const correct = d.given===d.q.correct;
-      return `
-      <div class="card2 rounded-xl p-4">
-        <p class="text-sm font-medium mb-2">${i+1}. ${d.q.textEn} ${d.q.textBn?`<span class="bn block text-xs muted mt-1">${d.q.textBn}</span>`:''}</p>
-        <div class="grid sm:grid-cols-2 gap-2 mb-2">
-          ${d.q.options.map(o=>`<div class="text-xs px-3 py-1.5 rounded-md ${o.key===d.q.correct?'bg-emerald-500/20 text-emerald-400':(o.key===d.given?'bg-red-500/20 text-red-400':'card')}">${o.key}. ${o.textEn}</div>`).join('')}
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <div class="flex-1 overflow-y-auto p-5 sm:p-8" id="reviewMainArea"></div>
+
+      <div id="reviewPaletteBackdrop" onclick="toggleReviewPaletteDrawer(false)" class="hidden lg:hidden fixed inset-0 bg-black/60 z-[78]"></div>
+      <div id="reviewPaletteDrawer" class="w-full lg:w-80 shrink-0 card2 p-4 overflow-y-auto fixed lg:relative inset-y-0 right-0 z-[79] lg:z-auto translate-x-full lg:translate-x-0 transition-transform duration-300 ease-out" style="border-left:1px solid var(--border); max-width:90vw;">
+        <div class="flex items-center justify-between mb-3 lg:hidden">
+          <p class="text-xs font-bold muted uppercase">Details</p>
+          <button onclick="toggleReviewPaletteDrawer(false)" class="w-7 h-7 rounded-full btn-ghost flex items-center justify-center"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
-        <p class="text-[11px] ${correct?'text-emerald-400':'text-red-400'} font-semibold mb-1">${d.given? (correct?'✔ Correct':'✘ Incorrect') : '— Not Answered'}</p>
-        <p class="text-xs muted">${d.q.explanation||''}</p>
-        ${d.q.solutionImg?`<img src="${d.q.solutionImg}" class="mt-2 rounded-lg max-h-40">`:''}
-      </div>`;
-    }).join('') : '<p class="muted text-sm text-center py-6">No questions match this filter.</p>'}
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-9 h-9 rounded-full gold-grad flex items-center justify-center text-ink text-xs font-bold shrink-0">${(sub.studentName||'?')[0]}</div>
+          <p class="text-sm font-semibold truncate">${sub.studentName}</p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs mb-4">
+          <div class="card rounded-lg p-2 flex items-center justify-between"><span class="text-emerald-400 font-bold">${correctCount}</span><span class="muted">Correct</span></div>
+          <div class="card rounded-lg p-2 flex items-center justify-between"><span class="text-red-400 font-bold">${incorrectCount}</span><span class="muted">Incorrect</span></div>
+          <div class="card rounded-lg p-2 flex items-center justify-between"><span class="muted font-bold">${unattemptedCount}</span><span class="muted">Unattempted</span></div>
+          <div class="card rounded-lg p-2 flex items-center justify-between"><span class="text-amber-400 font-bold">0</span><span class="muted">Partial</span></div>
+        </div>
+        <p class="text-xs font-bold muted uppercase mb-2">Speed Indicators</p>
+        <div class="grid grid-cols-4 gap-1.5 text-center mb-4">
+          <div class="card rounded-lg p-2"><i data-lucide="zap" class="w-4 h-4 text-emerald-400 mx-auto mb-1"></i><p class="text-[9px] muted leading-tight">Superfast</p></div>
+          <div class="card rounded-lg p-2"><i data-lucide="check-circle" class="w-4 h-4 text-sky-400 mx-auto mb-1"></i><p class="text-[9px] muted leading-tight">On Time</p></div>
+          <div class="card rounded-lg p-2"><i data-lucide="clock" class="w-4 h-4 text-amber-400 mx-auto mb-1"></i><p class="text-[9px] muted leading-tight">Slow</p></div>
+          <div class="card rounded-lg p-2"><i data-lucide="alert-circle" class="w-4 h-4 text-red-400 mx-auto mb-1"></i><p class="text-[9px] muted leading-tight">Not Correct</p></div>
+        </div>
+        <p class="text-xs font-bold muted uppercase mb-2">Section: ${sectionDisplayName(sub.subject)}</p>
+        <div class="grid grid-cols-5 gap-2 mb-4" id="reviewPalette"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="reviewViewMode='paper';renderReviewMain();toggleReviewPaletteDrawer(false)" class="btn-ghost rounded-lg py-2 text-[11px] font-bold">Question Paper</button>
+          <button onclick="closeModal();renderResultScreen(currentReviewSub())" class="btn-ghost rounded-lg py-2 text-[11px] font-bold">Summary</button>
+        </div>
+      </div>
+
+      <button onclick="toggleReviewPaletteDrawer(true)" class="lg:hidden fixed bottom-24 right-4 z-[77] w-12 h-12 rounded-full btn-gold shadow-lg flex items-center justify-center" title="Details & Question Palette">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="flex items-center justify-between px-4 py-3 card2 gap-3 flex-wrap" style="border-top:1px solid var(--border)">
+      <button onclick="reviewNav(-1)" class="btn-ghost rounded-lg px-4 py-2 text-xs font-bold">Previous</button>
+      <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer" onclick="toggleReattemptMode()">
+        Re-attempt Questions
+        <span id="reattemptToggleBtn" class="w-11 h-6 rounded-full ${reviewReattemptMode?'bg-amber-500':'bg-gray-600'} relative transition-colors inline-block">
+          <span class="absolute top-0.5 ${reviewReattemptMode?'right-0.5':'left-0.5'} w-5 h-5 rounded-full bg-white transition-all"></span>
+        </span>
+      </label>
+      <button onclick="reviewNav(1)" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold">Next</button>
     </div>
   </div>`;
+  renderReviewMain();
+  renderReviewPalette();
+  lucide.createIcons();
 }
+function renderReviewMain(){
+  const sub = currentReviewSub(); if(!sub) return;
+  const area = document.getElementById('reviewMainArea'); if(!area) return;
+
+  if(reviewViewMode==='paper'){
+    area.innerHTML = `
+      <div class="max-w-2xl mx-auto">
+        <h3 class="font-display font-700 text-lg mb-4">${sub.testTitle} — Full Question Paper</h3>
+        <div class="space-y-5">
+          ${sub.detail.map((d,i)=>`
+            <div class="card2 rounded-xl p-4">
+              <p class="text-sm font-medium mb-2">${i+1}. ${d.q.textEn}</p>
+              <div class="grid sm:grid-cols-2 gap-2">${d.q.options.map(o=>`<div class="text-xs px-3 py-1.5 rounded-md card">${o.key}. ${o.textEn}</div>`).join('')}</div>
+            </div>`).join('')}
+        </div>
+        <button onclick="reviewViewMode='single';renderReviewMain();renderReviewPalette()" class="btn-gold rounded-lg px-5 py-2.5 text-xs font-bold mt-6">Back to Review</button>
+      </div>`;
+    lucide.createIcons();
+    return;
+  }
+
+  const d = sub.detail[reviewCurrent];
+  const q = d.q;
+  const attempted = !!d.given;
+  const isCorrect = attempted && d.given===q.correct;
+  const statusLabel = !attempted ? 'Skipped' : (isCorrect? 'Correct' : 'Incorrect');
+  const statusColor = !attempted ? 'bg-gray-500' : (isCorrect? 'bg-emerald-500':'bg-red-500');
+  const expectedPerQ = sub.durationSec ? sub.durationSec/sub.detail.length : 60;
+  const speed = classifySpeed(d.timeSpent||0, expectedPerQ, isCorrect, attempted);
+  const communityPct = computeCommunityAccuracy(sub.testId, q.id);
+  const marksCorrectPerQ = +((sub.maxScore||0)/(sub.detail.length||1)).toFixed(2);
+  const localSel = reviewLocalAnswers[reviewCurrent];
+
+  area.innerHTML = `
+    <div class="max-w-2xl mx-auto">
+      <div class="flex items-center gap-2 flex-wrap mb-3">
+        <span class="text-sm font-bold">${reviewCurrent+1}</span>
+        <span class="badge ${statusColor} text-white">${statusLabel}</span>
+        ${speed?`<span class="text-xs ${speed.color} flex items-center gap-1"><i data-lucide="${speed.icon}" class="w-3.5 h-3.5"></i>${speed.label}</span>`:''}
+        <span class="text-xs muted">You: ${fmtReviewTime(d.timeSpent)} &nbsp;Avg: ${fmtReviewTime(expectedPerQ)}</span>
+        <span class="text-xs muted">Marks: <b class="${isCorrect?'text-emerald-400':'text-red-400'}">${isCorrect? '+'+marksCorrectPerQ : '0'}</b></span>
+        ${communityPct!==null?`<span class="badge bg-emerald-500/20 text-emerald-400 ml-auto">${communityPct}% answered correctly</span>`:''}
+      </div>
+      <p class="text-base sm:text-lg font-medium mb-6 leading-relaxed">${q.textEn} ${q.textBn?`<span class="bn block text-sm muted mt-1">${q.textBn}</span>`:''}</p>
+      <div class="space-y-3 mb-5">
+        ${q.options.map(o=>{
+          let cls = 'card';
+          if(reviewReattemptMode){
+            if(localSel===o.key) cls = (localSel===q.correct) ? 'card ring-2 ring-emerald-500' : 'card ring-2 ring-red-500';
+          } else {
+            if(o.key===q.correct) cls='bg-emerald-500/15 ring-1 ring-emerald-500';
+            else if(o.key===d.given) cls='bg-red-500/15 ring-1 ring-red-500';
+          }
+          return `<label class="flex items-center gap-3 rounded-xl px-4 py-3 ${cls} ${reviewReattemptMode?'cursor-pointer':''}">
+            <input type="radio" name="reviewOpt" ${!reviewReattemptMode?'disabled':''} ${localSel===o.key?'checked':''} onchange="selectReattemptOption('${o.key}')" class="w-4 h-4 accent-amber-500">
+            <span class="text-sm font-semibold gold-text">${o.key}.</span><span class="text-sm">${o.textEn}</span>
+          </label>`;
+        }).join('')}
+      </div>
+      ${reviewReattemptMode?'<p class="text-[11px] muted mb-4">Re-attempt mode is for practice only — your original score is unaffected.</p>':''}
+      <button onclick="toggleViewSolution()" class="btn-ghost rounded-lg px-4 py-2 text-xs font-bold flex items-center gap-1.5 mb-3"><i data-lucide="eye" class="w-3.5 h-3.5"></i>${reviewShowSolution?'Hide Solution':'View Solution'} <span class="muted font-normal">— Click here to see the answer now</span></button>
+      ${reviewShowSolution? `<div class="card2 rounded-xl p-4 text-sm muted">
+        <p class="mb-1"><b class="text-emerald-400">Correct Answer:</b> ${q.correct}. ${(q.options.find(o=>o.key===q.correct)||{}).textEn||''}</p>
+        <p>${q.explanation||'No explanation provided for this question.'}</p>
+        ${q.solutionImg?`<img src="${q.solutionImg}" class="mt-2 rounded-lg max-h-52">`:''}
+      </div>`:''}
+    </div>`;
+  lucide.createIcons();
+}
+function renderReviewPalette(){
+  const sub = currentReviewSub(); if(!sub) return;
+  const el = document.getElementById('reviewPalette'); if(!el) return;
+  el.innerHTML = sub.detail.map((d,i)=>{
+    const attempted = !!d.given;
+    const isCorrect = attempted && d.given===d.q.correct;
+    const cls = !attempted? 'bg-gray-500 text-white' : (isCorrect?'bg-emerald-500 text-ink':'bg-red-500 text-white');
+    return `<button onclick="reviewGoTo(${i})" class="palette-btn ${cls} ${reviewCurrent===i && reviewViewMode==='single'?'ring-2 ring-white':''}">${i+1}</button>`;
+  }).join('');
+}
+function reviewGoTo(idx){
+  const sub = currentReviewSub(); if(!sub) return;
+  reviewCurrent = Math.max(0, Math.min(idx, sub.detail.length-1));
+  reviewViewMode = 'single'; reviewShowSolution = false;
+  renderReviewMain(); renderReviewPalette();
+  toggleReviewPaletteDrawer(false);
+}
+function reviewNav(delta){ reviewGoTo(reviewCurrent+delta); }
+function toggleReviewPaletteDrawer(open){
+  const drawer = document.getElementById('reviewPaletteDrawer');
+  const backdrop = document.getElementById('reviewPaletteBackdrop');
+  if(!drawer) return;
+  if(open){ drawer.classList.remove('translate-x-full'); if(backdrop) backdrop.classList.remove('hidden'); }
+  else{ drawer.classList.add('translate-x-full'); if(backdrop) backdrop.classList.add('hidden'); }
+}
+function toggleReattemptMode(){
+  reviewReattemptMode = !reviewReattemptMode;
+  reviewLocalAnswers = {};
+  const btn = document.getElementById('reattemptToggleBtn');
+  if(btn){
+    btn.classList.toggle('bg-amber-500', reviewReattemptMode);
+    btn.classList.toggle('bg-gray-600', !reviewReattemptMode);
+    const knob = btn.querySelector('span');
+    if(knob){ knob.classList.toggle('right-0.5', reviewReattemptMode); knob.classList.toggle('left-0.5', !reviewReattemptMode); }
+  }
+  renderReviewMain();
+}
+function selectReattemptOption(key){ reviewLocalAnswers[reviewCurrent] = key; renderReviewMain(); }
+function toggleViewSolution(){ reviewShowSolution = !reviewShowSolution; renderReviewMain(); }
 
 /* Branded Scorecard (canvas-based image) */
 function drawScorecardCanvas(sub, rank){
@@ -1607,18 +1899,31 @@ function showQuizInstructions(qCount, mins){
       <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Quiz Instructions</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
       <div class="card2 rounded-xl p-4 mb-4 text-sm space-y-2">
         <p><b>Quiz:</b> Quick Quiz — General Knowledge</p>
+        <p><b>Candidate:</b> ${user.name} ${user.phone?('| '+user.phone):''}</p>
         <p><b>Total Questions:</b> ${actualCount}</p>
         <p><b>Duration:</b> ${mins} minutes</p>
         <p><b>Total Marks:</b> ${totalMarks}</p>
         <p><b>Marking Scheme:</b> <span class="text-emerald-400">+1</span> for correct, <span class="text-red-400">-0.25</span> for wrong</p>
       </div>
-      <ul class="text-xs muted space-y-1.5 mb-5 list-disc pl-4">
+      <ul class="text-xs muted space-y-1.5 mb-4 list-disc pl-4">
         <li>The quiz will open in full-screen mode for a distraction-free experience.</li>
         <li>Switching tabs or exiting full-screen will trigger a warning; 3 violations auto-submit your quiz.</li>
         <li>Use "Save & Next", "Mark for Review & Next" and "Clear Response" to navigate.</li>
-        <li>The timer starts the instant you click "Start Test Now" and cannot be paused.</li>
+        <li>The timer starts the instant you begin and cannot be paused.</li>
       </ul>
-      <button onclick="beginQuickQuiz(${qCount},${mins})" class="w-full btn-gold rounded-lg py-3 text-sm font-bold flex items-center justify-center gap-2"><i data-lucide="play" class="w-4 h-4"></i>Start Test Now</button>
+      <div class="mb-4">
+        <label class="text-xs font-bold muted uppercase block mb-1.5">Choose your default language</label>
+        <select id="instrLangSelect" class="w-full rounded-lg px-3 py-2.5 text-sm">
+          <option value="en">English</option>
+          <option value="bn">বাংলা (Bengali)</option>
+          <option value="hi">हिन्दी (Hindi)</option>
+        </select>
+      </div>
+      <label class="flex items-start gap-2.5 mb-5 cursor-pointer">
+        <input type="checkbox" id="instrAgreeCheckbox" onchange="updateBeginButtonState()" class="w-4 h-4 mt-0.5 accent-amber-500 shrink-0">
+        <span class="text-xs muted">I have understood and agree to all the instructions.</span>
+      </label>
+      <button id="instrBeginBtn" disabled onclick="beginQuickQuiz(${qCount},${mins})" class="w-full btn-gold rounded-lg py-3 text-sm font-bold flex items-center justify-center gap-2 opacity-40 cursor-not-allowed"><i data-lucide="play" class="w-4 h-4"></i>I am ready to begin</button>
     </div>`);
 }
 function beginQuickQuiz(qCount, mins){
@@ -1626,12 +1931,14 @@ function beginQuickQuiz(qCount, mins){
   if(!user){ alert('Please login to start the quiz.'); openLoginModal(); return; }
   const gkOnly = DB.quizPool.filter(q=>q.subject==='gk');
   if(gkOnly.length===0){ alert('No GK questions are available yet. Please check back soon.'); return; }
+  const chosenLang = getSelectedInstrLang();
   const pool = shuffle(gkOnly).slice(0, Math.min(qCount, gkOnly.length)).map(q=>({...q, options: shuffle(q.options)}));
   closeModal();
   examState = {
     testId: 'quiz_'+qCount, source:'quiz', subject:'quiz', title: `Quick Quiz — GK — ${pool.length} Questions`, durationSec: mins*60, remaining: mins*60,
     marksCorrect: 1, marksWrong: 0.25, questions: pool, answers: new Array(pool.length).fill(null),
-    status: new Array(pool.length).fill('not-visited'), current:0, violations:0, lang:'en', timer:null, startedAt: Date.now()
+    status: new Array(pool.length).fill('not-visited'), timeSpent: new Array(pool.length).fill(0), questionEnteredAt: Date.now(),
+    current:0, violations:0, lang: chosenLang, timer:null, startedAt: Date.now()
   };
   examState.status[0]='not-answered';
   renderExamScreen(); startExamTimer(); attachAntiCheat(); requestFullscreenSafe();
