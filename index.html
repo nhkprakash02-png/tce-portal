@@ -278,8 +278,8 @@ function uid(prefix){ return prefix+'_'+Math.random().toString(36).slice(2,9)+Da
 function priceLabel(p){ return '₹'+p+' / Month'; }
 
 function seedDB(){
-  const subjects = ['math','english','reasoning','gk','full'];
-  const subjectLabel = {math:'Math',english:'English',reasoning:'Reasoning',gk:'GK',full:'Full Mock'};
+  const subjects = ['math','english','reasoning','gk','science','full'];
+  const subjectLabel = {math:'Math',english:'English',reasoning:'Reasoning',gk:'GK',science:'Science',full:'Full Mock'};
 
   function sampleQ(subject, n){
     const banks = {
@@ -311,6 +311,13 @@ function seedDB(){
         {en:"Which is the longest river in India?", bn:"ভারতের দীর্ঘতম নদী কোনটি?", opts:["Yamuna","Ganga","Godavari","Brahmaputra"], correct:1, exp:"River Ganga is the longest in India."},
         {en:"West Bengal Police was established under which Act?", bn:"", opts:["Police Act 1861","Police Act 1900","Police Act 1947","Police Act 1975"], correct:0, exp:"Indian Police Act, 1861."},
         {en:"Current Affairs: Which state hosted the 2026 National Games? (Demo Q)", bn:"", opts:["Uttarakhand","West Bengal","Kerala","Gujarat"], correct:0, exp:"Demo current affairs sample — replace via Admin GK Uploader."}
+      ],
+      science:[
+        {en:"What is the SI unit of force?", bn:"বলের SI একক কী?", opts:["Joule","Newton","Watt","Pascal"], correct:1, exp:"The SI unit of force is the Newton (N)."},
+        {en:"Which gas do plants absorb from the atmosphere for photosynthesis?", bn:"সালোকসংশ্লেষণের জন্য উদ্ভিদ বায়ুমণ্ডল থেকে কোন গ্যাস গ্রহণ করে?", opts:["Oxygen","Nitrogen","Carbon Dioxide","Hydrogen"], correct:2, exp:"Plants absorb Carbon Dioxide (CO2) for photosynthesis."},
+        {en:"The human heart has how many chambers?", bn:"মানুষের হৃদয়ে কতগুলি প্রকোষ্ঠ থাকে?", opts:["2","3","4","5"], correct:2, exp:"The human heart has 4 chambers: 2 atria and 2 ventricles."},
+        {en:"Which part of the atom carries a negative charge?", bn:"পরমাণুর কোন অংশে ঋণাত্মক চার্জ থাকে?", opts:["Proton","Neutron","Electron","Nucleus"], correct:2, exp:"Electrons carry a negative charge."},
+        {en:"pH value of pure water at room temperature is:", bn:"", opts:["5","7","9","11"], correct:1, exp:"Pure water is neutral with a pH of 7."}
       ]
     };
     const src = subject==='full' ? [].concat(banks.math.slice(0,2),banks.english.slice(0,2),banks.reasoning.slice(0,1)) : banks[subject];
@@ -365,6 +372,7 @@ function seedDB(){
       {id:uid('st'), name:"Amit Roy", phone:"9800055566", email:"amit@example.com", address:"Cooch Behar, WB", joinDate:"2026-07-15", paymentStatus:"Blocked", batch:"KP SI"}
     ],
     mockTests, quizPool, pyqSets,
+    quizDurations: {"5":3, "10":7, "15":10, "20":12},
     submissions: [],
     materials: {
       math:[{id:uid('mat'), title:"Math Formula Booklet (Demo)", url:"", views:0}],
@@ -404,6 +412,8 @@ function normalizeDB(db){
   Object.keys(db.mockTests||{}).forEach(sub=>{
     (db.mockTests[sub]||[]).forEach(t=>{ if(!t.examCategory) t.examCategory = "All Exams"; });
   });
+  if(db.mockTests && !db.mockTests.science) db.mockTests.science = []; // "Science" subject introduced later
+  if(!db.quizDurations) db.quizDurations = {"5":3, "10":7, "15":10, "20":12};
   (db.batches||[]).forEach(b=>{ if(!b.examCategory) b.examCategory = "All Exams"; b.price = 300; }); // pricing standardized portal-wide at ₹300 / Month
   if(!db.examCategories || !db.examCategories.includes("Railway (RRB)")){
     db.examCategories = db.examCategories || [];
@@ -430,7 +440,7 @@ function normalizeDB(db){
    live onSnapshot listener so changes sync to everyone in real time.
 ========================================================================= */
 const FS_COLLECTION = 'tce_app_data';
-const DB_KEYS = ['examCategories','banners','ticker','students','mockTests','quizPool','pyqSets','submissions','materials','notices','inquiries','batches','mentors'];
+const DB_KEYS = ['examCategories','banners','ticker','students','mockTests','quizPool','pyqSets','submissions','materials','notices','inquiries','batches','mentors','quizDurations'];
 const FS_MAX_DOC_BYTES = 900000; // safety margin under Firestore's 1,048,576 byte/doc limit
 // Cloud Firestore rejects arrays that directly contain other arrays ("nested arrays are
 // not supported") — e.g. a batch's timetable stored as [["Mon","Math"],["Tue","GK"]].
@@ -607,6 +617,16 @@ const TABS = [
   {id:'notices', label:'Notices & Contact', icon:'bell'}
 ];
 let activeTab = 'home';
+// Tracks whether we're currently "inside" a pushed modal/overlay history entry. Chained
+// internal transitions (e.g. instructions -> exam -> result -> review) replace this single
+// entry instead of stacking a new one each time, so one physical/on-screen back press always
+// returns instantly to the underlying page instead of requiring several presses.
+let modalHistoryDepth = 0;
+function pushOrReplaceModalState(extra){
+  const state = Object.assign({modal:true, tab:activeTab}, extra||{});
+  if(modalHistoryDepth===0){ history.pushState(state, '', location.hash||('#'+activeTab)); modalHistoryDepth = 1; }
+  else{ history.replaceState(state, '', location.hash||('#'+activeTab)); }
+}
 
 function renderNav(){
   const user = getCurrentUser();
@@ -809,18 +829,19 @@ function renderMentors(){
 ========================================================================= */
 function openModal(html){
   document.getElementById('modalRoot').innerHTML = `<div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-3" onclick="if(event.target===this)closeModal()"><div class="w-full max-w-lg fade-in">${html}</div></div>`;
-  history.pushState({modal:true, tab:activeTab}, '', location.hash||('#'+activeTab));
+  pushOrReplaceModalState();
   updateBackButtonVisibility();
   lucide.createIcons();
 }
 function openModalWide(html){
   document.getElementById('modalRoot').innerHTML = `<div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-3" onclick="if(event.target===this)closeModal()"><div class="w-full max-w-4xl fade-in max-h-[92vh] overflow-y-auto rounded-2xl">${html}</div></div>`;
-  history.pushState({modal:true, tab:activeTab}, '', location.hash||('#'+activeTab));
+  pushOrReplaceModalState();
   updateBackButtonVisibility();
   lucide.createIcons();
 }
 function closeModal(){
   document.getElementById('modalRoot').innerHTML='';
+  modalHistoryDepth = 0;
   updateBackButtonVisibility();
   // Whatever was open (admin panel, enrollment, banner/material upload, etc.) may have
   // changed data — refresh the page underneath so changes appear immediately instead
@@ -835,16 +856,50 @@ function closeModal(){
 ========================================================================= */
 function updateBackButtonVisibility(){
   const modalOpen = document.getElementById('modalRoot').innerHTML.trim().length>0;
-  const show = modalOpen || activeTab!=='home';
+  // The floating back button is removed entirely while an active test/quiz is in progress
+  // (device/browser back is intercepted separately below); it stays available everywhere else.
+  const show = !examState && (modalOpen || activeTab!=='home');
   const btn = document.getElementById('globalBackBtn');
-  if(!btn) return;
-  if(show){ btn.classList.remove('hidden'); btn.classList.add('flex'); }
-  else{ btn.classList.add('hidden'); btn.classList.remove('flex'); }
+  if(btn){
+    if(show){ btn.classList.remove('hidden'); btn.classList.add('flex'); }
+    else{ btn.classList.add('hidden'); btn.classList.remove('flex'); }
+  }
+  // Strict background scroll lock: whenever any modal/overlay/pre-instruction screen is open,
+  // the page behind it must not scroll at all (no scroll chaining).
+  document.body.style.overflow = modalOpen ? 'hidden' : '';
+}
+function showLeaveTestConfirm(){
+  const root = document.getElementById('examWarnRoot');
+  if(!root) return; // exam screen isn't actually open — nothing to intercept
+  root.innerHTML = `
+    <div class="fixed inset-0 z-[65] modal-backdrop flex items-center justify-center p-4">
+      <div class="card glow-border rounded-2xl p-6 max-w-sm text-center">
+        <i data-lucide="alert-triangle" class="w-10 h-10 text-amber-400 mx-auto mb-3"></i>
+        <h3 class="font-display font-700 text-lg mb-2">Leave Test?</h3>
+        <p class="text-sm muted mb-4">Are you sure you want to leave or submit your test? Your current answers will be submitted.</p>
+        <div class="flex gap-2">
+          <button onclick="document.getElementById('examWarnRoot').innerHTML=''" class="flex-1 btn-ghost rounded-lg py-2.5 text-xs font-bold">Stay</button>
+          <button onclick="leaveActiveTestConfirmed()" class="flex-1 rounded-lg py-2.5 text-xs font-bold bg-red-600 text-white">Leave / Submit</button>
+        </div>
+      </div>
+    </div>`;
+  lucide.createIcons();
+}
+function leaveActiveTestConfirmed(){
+  const root = document.getElementById('examWarnRoot'); if(root) root.innerHTML='';
+  if(examState) finishExam(false);
 }
 window.addEventListener('popstate', (e)=>{
+  // Device/browser back pressed during an active test: never silently exit. Re-push the
+  // current state to cancel the visual back-navigation, then ask for confirmation.
+  if(examState){
+    history.pushState({modal:true, tab:activeTab, exam:true}, '', location.hash||('#'+activeTab));
+    showLeaveTestConfirm();
+    return;
+  }
   // Any screen we navigated "into" (a tab, a modal, an exam, admin panel, etc.) gets undone by one browser-back step.
   document.getElementById('modalRoot').innerHTML='';
-  if(examState){ clearInterval(examState.timer); detachAntiCheat(); examState=null; if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
+  modalHistoryDepth = 0;
   const st = e.state;
   const tab = (st && st.tab) ? st.tab : 'home';
   setTabFromHistory(tab);
@@ -1090,7 +1145,7 @@ function tplHome(){
 /* ---------- MOCK TESTS TAB (search + subject tabs) ---------- */
 let mockSubjectTab = 'math'; let mockSearchQ=''; let mockExamFilter='all';
 function tplMocks(){
-  const subjects = [['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['full','Full Mock']];
+  const subjects = [['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['science','Science'],['full','Full Mock']];
   return `
   <div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
     <div>
@@ -1114,6 +1169,12 @@ function tplMocks(){
   </div>
   <div id="mocksList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
 }
+function openLatestAnalysis(testId){
+  const user = getCurrentUser(); if(!user) return;
+  const subs = DB.submissions.filter(s=>s.testId===testId && s.studentId===user.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(subs.length===0){ alert('No attempt found for this test yet.'); return; }
+  renderResultScreen(subs[0]);
+}
 function initMocksTab(){
   document.querySelectorAll('[id^="mst_"]').forEach(b=>b.classList.remove('tab-active'));
   const active = document.getElementById('mst_'+mockSubjectTab); if(active) active.classList.add('tab-active');
@@ -1136,10 +1197,15 @@ function initMocksTab(){
       <h3 class="font-display font-700 text-sm mb-1">${t.title}</h3>
       <p class="text-xs muted mb-3">${t.questions.length} Questions • ${t.durationMin} min • +${t.marksCorrect}/-${t.marksWrong}</p>
       ${attempts>0?`<p class="text-[11px] muted mb-2">Attempts so far: <span class="gold-text font-semibold">${attempts}</span></p>`:''}
+      ${(attempts>0 && !locked) ? `
+      <div class="mt-auto grid grid-cols-2 gap-2">
+        <button onclick="showPreExamInstructions('${t.id}','mock','${mockSubjectTab}')" class="btn-gold rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="repeat" class="w-3.5 h-3.5"></i>Re-attempt</button>
+        <button onclick="openLatestAnalysis('${t.id}')" class="btn-ghost rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Analysis</button>
+      </div>` : `
       <button onclick="${locked?`openEnrollModal('locked')`:`showPreExamInstructions('${t.id}','mock','${mockSubjectTab}')`}" class="mt-auto ${locked?'btn-ghost':'btn-gold'} rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1.5">
-        <i data-lucide="${locked?'lock':(attempts>0?'repeat':'play')}" class="w-3.5 h-3.5"></i>
-        ${locked?'Enroll in Batch to Unlock':(attempts>0?'Re-Attempt Test':'Start Test')}
-      </button>
+        <i data-lucide="${locked?'lock':'play'}" class="w-3.5 h-3.5"></i>
+        ${locked?'Enroll in Batch to Unlock':'Start Test'}
+      </button>`}
     </div>`;
   }).join('') : `<p class="muted text-sm col-span-full">No tests match your search.</p>`;
 }
@@ -1187,9 +1253,14 @@ function initPyqTab(){
       <h3 class="font-display font-700 text-sm mb-1">${p.title}</h3>
       <p class="text-xs muted mb-3">${p.questions.length} Questions • ${p.durationMin} min • +${p.marksCorrect}/-${p.marksWrong}</p>
       ${attempts>0?`<p class="text-[11px] muted mb-2">Attempts so far: <span class="gold-text font-semibold">${attempts}</span></p>`:''}
+      ${attempts>0 ? `
+      <div class="mt-auto grid grid-cols-2 gap-2">
+        <button onclick="showPreExamInstructions('${p.id}','pyq')" class="btn-gold rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="repeat" class="w-3.5 h-3.5"></i>Re-attempt</button>
+        <button onclick="openLatestAnalysis('${p.id}')" class="btn-ghost rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Analysis</button>
+      </div>` : `
       <button onclick="showPreExamInstructions('${p.id}','pyq')" class="mt-auto btn-gold rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1.5">
-        <i data-lucide="${attempts>0?'repeat':'play'}" class="w-3.5 h-3.5"></i>${attempts>0?'Re-Attempt':'Start Test'}
-      </button>
+        <i data-lucide="play" class="w-3.5 h-3.5"></i>Start Test
+      </button>`}
     </div>`;
   }).join('') : `<p class="muted text-sm col-span-full">No PYQ sets match your filters.</p>`;
 }
@@ -1309,7 +1380,7 @@ function startMockTest(testId, subject){ showPreExamInstructions(testId,'mock',s
 function renderExamScreen(){
   const st = examState;
   const hasBn = st.questions.some(qq=>qq.textBn && qq.textBn.trim().length>0);
-  history.pushState({modal:true, tab:activeTab, exam:true}, '', location.hash||('#'+activeTab));
+  pushOrReplaceModalState({exam:true});
   updateBackButtonVisibility();
   document.getElementById('modalRoot').innerHTML = `
   <div class="fixed inset-0 z-50 bg-[var(--bg)] flex flex-col" id="examRoot">
@@ -1328,7 +1399,7 @@ function renderExamScreen(){
       <div class="flex-1 overflow-y-auto p-5 sm:p-8 watermark-wrap ${logoAvailable?'':'wm-fallback'} relative">
         <div class="relative z-10 max-w-2xl mx-auto">
           <div class="flex justify-between items-center mb-4">
-            <span class="text-xs muted">Question <span class="gold-text font-bold">${st.current+1}</span> of ${st.questions.length}</span>
+            <span class="text-xs muted">Question <span id="examQCounter" class="gold-text font-bold">${st.current+1}</span> of ${st.questions.length}</span>
             <span class="text-xs muted">Marks: <span class="text-emerald-400 font-semibold">+${st.marksCorrect}</span> / <span class="text-red-400 font-semibold">-${st.marksWrong}</span></span>
           </div>
           <p id="examQText" class="text-base sm:text-lg font-medium mb-6 leading-relaxed"></p>
@@ -1339,21 +1410,25 @@ function renderExamScreen(){
       <!-- Backdrop for the mobile/compact-landscape palette drawer -->
       <div id="examPaletteBackdrop" onclick="toggleExamPaletteDrawer(false)" class="hidden lg:hidden fixed inset-0 bg-black/60 z-[78]"></div>
 
-      <div id="examPaletteDrawer" class="w-full lg:w-72 shrink-0 card2 p-4 overflow-y-auto fixed lg:relative inset-y-0 right-0 z-[79] lg:z-auto translate-x-full lg:translate-x-0 transition-transform duration-300 ease-out" style="border-left:1px solid var(--border); max-width:85vw;">
-        <div class="flex items-center justify-between mb-3 lg:hidden">
-          <p class="text-xs font-bold muted uppercase">Question Palette</p>
-          <button onclick="toggleExamPaletteDrawer(false)" class="w-7 h-7 rounded-full btn-ghost flex items-center justify-center"><i data-lucide="x" class="w-4 h-4"></i></button>
+      <div id="examPaletteDrawer" class="w-full lg:w-72 shrink-0 card2 fixed lg:relative inset-y-0 right-0 z-[79] lg:z-auto translate-x-full lg:translate-x-0 transition-transform duration-300 ease-out flex flex-col" style="border-left:1px solid var(--border); max-width:85vw;">
+        <div class="flex-1 overflow-y-auto p-4 min-h-0">
+          <div class="flex items-center justify-between mb-3 lg:hidden">
+            <p class="text-xs font-bold muted uppercase">Question Palette</p>
+            <button onclick="toggleExamPaletteDrawer(false)" class="w-7 h-7 rounded-full btn-ghost flex items-center justify-center"><i data-lucide="x" class="w-4 h-4"></i></button>
+          </div>
+          <p class="text-xs font-bold muted uppercase mb-3 hidden lg:block">Question Palette</p>
+          <div class="grid grid-cols-5 gap-2 mb-4" id="examPalette"></div>
+          <div class="space-y-1.5 text-[11px]">
+            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span>Answered</div>
+            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span>Not Answered</div>
+            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-gray-500 inline-block"></span>Not Visited</div>
+            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500 inline-block"></span>Marked for Review</div>
+            <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500 inline-block relative">•</span>Answered &amp; Marked</div>
+          </div>
         </div>
-        <p class="text-xs font-bold muted uppercase mb-3 hidden lg:block">Question Palette</p>
-        <div class="grid grid-cols-5 gap-2 mb-4" id="examPalette"></div>
-        <div class="space-y-1.5 text-[11px]">
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span>Answered</div>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span>Not Answered</div>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-gray-500 inline-block"></span>Not Visited</div>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500 inline-block"></span>Marked for Review</div>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-purple-500 inline-block relative">•</span>Answered &amp; Marked</div>
+        <div class="shrink-0 p-4" style="border-top:1px solid var(--border)">
+          <button onclick="confirmSubmitExam()" class="w-full rounded-lg py-2.5 text-xs font-bold bg-red-600 text-white">Submit Test</button>
         </div>
-        <button onclick="confirmSubmitExam()" class="w-full mt-5 rounded-lg py-2.5 text-xs font-bold bg-red-600 text-white">Submit Test</button>
       </div>
 
       <!-- Hamburger toggle: only shown below the lg breakpoint, opens the palette as a sliding drawer -->
@@ -1383,22 +1458,31 @@ function toggleExamPaletteDrawer(open){
 }
 function renderExamQuestion(){
   const st = examState; const q = st.questions[st.current];
+  const counterEl = document.getElementById('examQCounter'); if(counterEl) counterEl.textContent = st.current+1;
   document.getElementById('examQText').innerHTML = (st.lang==='bn' && q.textBn) ? q.textBn : q.textEn;
   document.getElementById('examQText').className = `text-base sm:text-lg font-medium mb-6 leading-relaxed ${(st.lang==='bn'&&q.textBn)?'bn':''}`;
   document.getElementById('examOptions').innerHTML = q.options.map(o=>{
     const checked = st.answers[st.current]===o.key;
     const label = (st.lang==='bn' && o.textBn) ? o.textBn : o.textEn;
     return `<label class="flex items-center gap-3 card rounded-xl px-4 py-3 cursor-pointer ${checked?'ring-2 ring-amber-500':''}">
-      <input type="radio" name="examOpt" ${checked?'checked':''} onchange="selectOption('${o.key}')" class="w-4 h-4 accent-amber-500">
+      <input type="radio" name="examOpt" ${checked?'checked':''} onclick="handleOptionClick('${o.key}')" class="w-4 h-4 accent-amber-500">
       <span class="text-sm font-semibold gold-text">${o.key}.</span>
       <span class="text-sm ${(st.lang==='bn'&&o.textBn)?'bn':''}">${label}</span>
     </label>`;
   }).join('');
 }
-function selectOption(key){
-  const st = examState; st.answers[st.current] = key;
-  st.status[st.current] = st.status[st.current].includes('marked') ? 'answered-marked' : 'answered';
-  renderPalette(); saveExamProgress();
+// Clicking an option fires on every click (even re-clicking an already-selected radio, unlike
+// the native "change" event) — clicking the currently-selected option a second time clears it.
+function handleOptionClick(key){
+  const st = examState;
+  if(st.answers[st.current] === key){
+    st.answers[st.current] = null;
+    st.status[st.current] = st.status[st.current].includes('marked') ? 'marked' : 'not-answered';
+  } else {
+    st.answers[st.current] = key;
+    st.status[st.current] = st.status[st.current].includes('marked') ? 'answered-marked' : 'answered';
+  }
+  renderExamQuestion(); renderPalette(); saveExamProgress();
 }
 function clearResponse(){
   const st = examState; st.answers[st.current] = null;
@@ -1540,7 +1624,7 @@ function renderResultScreen(sub, autoTimeout, autoViolation){
   const avgTime = Math.round(leaderboard.reduce((a,s)=>a+(s.timeTakenSec||0),0)/leaderboard.length);
   const fmtTime = (secs)=>{ const m=Math.floor((secs||0)/60), s=(secs||0)%60; return `${m}:${String(s).padStart(2,'0')}`; };
   const weak = sub.accuracy < 50;
-  history.pushState({modal:true, tab:activeTab, exam:true}, '', location.hash||('#'+activeTab));
+  pushOrReplaceModalState({exam:true});
   updateBackButtonVisibility();
   document.getElementById('modalRoot').innerHTML = `
   <div class="fixed inset-0 z-50 bg-[var(--bg)] overflow-y-auto">
@@ -1650,7 +1734,7 @@ function reviewSolutions(subId){
 }
 function renderReviewScreen(){
   const sub = currentReviewSub(); if(!sub) return;
-  history.pushState({modal:true, tab:activeTab, exam:true}, '', location.hash||('#'+activeTab));
+  pushOrReplaceModalState({exam:true});
   updateBackButtonVisibility();
   const correctCount = sub.detail.filter(d=>d.given && d.given===d.q.correct).length;
   const incorrectCount = sub.detail.filter(d=>d.given && d.given!==d.q.correct).length;
@@ -1877,7 +1961,7 @@ function tplQuiz(){
   <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" id="quizModes"></div>`;
 }
 function initQuizTab(){
-  const modes = [[5,3],[10,7],[15,10],[20,12]];
+  const modes = [5,10,15,20].map(q=>[q, DB.quizDurations[String(q)] || Math.ceil(q*0.6)]);
   document.getElementById('quizModes').innerHTML = modes.map(([q,m])=>`
     <div class="card glow-border rounded-2xl p-5 text-center">
       <i data-lucide="zap" class="w-6 h-6 gold-text mx-auto mb-2"></i>
@@ -2273,6 +2357,25 @@ function renderAdminBody(){
 /* --- Students --- */
 function adminStudentsView(){
   return `
+  <div class="card2 rounded-xl p-4 mb-4">
+    <p class="text-xs font-bold muted uppercase mb-3">Manually Enroll a Student</p>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <input id="newStuName" type="text" placeholder="Full Name" class="rounded-lg px-3 py-2 text-xs">
+      <input id="newStuPhone" type="tel" placeholder="Phone Number" class="rounded-lg px-3 py-2 text-xs">
+      <input id="newStuEmail" type="email" placeholder="Email" class="rounded-lg px-3 py-2 text-xs">
+      <input id="newStuAddress" type="text" placeholder="Address (optional)" class="rounded-lg px-3 py-2 text-xs">
+    </div>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <select id="newStuStatus" class="rounded-lg px-3 py-2 text-xs">
+        <option value="Approved">Approved (grant mock access now)</option>
+        <option value="Not Enrolled">Not Enrolled</option>
+        <option value="Pending">Pending</option>
+      </select>
+      <select id="newStuBatch" class="rounded-lg px-3 py-2 text-xs">${DB.batches.map(b=>`<option value="${b.name}">${b.name}</option>`).join('')}</select>
+    </div>
+    <button onclick="addStudentManually()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold flex items-center gap-1.5"><i data-lucide="user-plus" class="w-3.5 h-3.5"></i>+ Enroll Student</button>
+    <p class="text-[11px] muted mt-2">The student becomes eligible for enrolled/paid mock tests the moment they log in with this same email or phone.</p>
+  </div>
   <div class="flex justify-between items-center mb-4">
     <p class="text-sm muted">${DB.students.length} registered students</p>
     <button onclick="exportStudentsExcel()" class="btn-gold rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>Export to Excel</button>
@@ -2284,13 +2387,31 @@ function adminStudentsView(){
         <tr style="border-top:1px solid var(--border)">
           <td class="p-2">${i+1}</td><td class="p-2">${s.name}</td><td class="p-2">${s.phone}</td><td class="p-2">${s.email}</td><td class="p-2">${s.address||'-'}</td><td class="p-2">${s.joinDate}</td>
           <td class="p-2"><span class="badge ${s.paymentStatus==='Approved'?'bg-emerald-500/20 text-emerald-400':(s.paymentStatus==='Pending'?'bg-amber-500/20 gold-text':'bg-gray-500/20 muted')}">${s.paymentStatus}</span></td>
-          <td class="p-2 flex gap-1"><button onclick="grantAccess('${s.id}')" class="px-2 py-1 rounded bg-emerald-600 text-white text-[10px] font-bold">Grant</button><button onclick="blockStudent('${s.id}')" class="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold">Block</button></td>
+          <td class="p-2 flex gap-1"><button onclick="grantAccess('${s.id}')" class="px-2 py-1 rounded bg-emerald-600 text-white text-[10px] font-bold">Grant</button><button onclick="blockStudent('${s.id}')" class="px-2 py-1 rounded bg-red-600 text-white text-[10px] font-bold">Block</button><button onclick="deleteStudent('${s.id}')" class="px-2 py-1 rounded bg-gray-600 text-white text-[10px] font-bold flex items-center gap-0.5"><i data-lucide="trash-2" class="w-3 h-3"></i></button></td>
         </tr>`).join('')}
     </tbody>
   </table></div>`;
 }
+function addStudentManually(){
+  const name = document.getElementById('newStuName').value.trim();
+  const phone = document.getElementById('newStuPhone').value.trim();
+  const email = document.getElementById('newStuEmail').value.trim();
+  const address = document.getElementById('newStuAddress').value.trim();
+  const paymentStatus = document.getElementById('newStuStatus').value;
+  const batch = document.getElementById('newStuBatch').value;
+  if(!name || (!phone && !email)){ alert('Please enter a name and at least a phone number or email.'); return; }
+  if((email && DB.students.some(s=>(s.email||'').toLowerCase()===email.toLowerCase())) || (phone && DB.students.some(s=>s.phone===phone))){
+    alert('A student with this email or phone already exists.'); return;
+  }
+  DB.students.push({id:uid('st'), name, phone, email, address, joinDate:new Date().toISOString().slice(0,10), paymentStatus, batch: paymentStatus==='Approved'? batch : '—'});
+  saveDB(); renderAdminBody();
+}
 function grantAccess(id){ const s=DB.students.find(x=>x.id===id); if(s){ s.paymentStatus='Approved'; if(s.batch==='—')s.batch='WBP Special'; saveDB(); renderAdminBody(); } }
 function blockStudent(id){ const s=DB.students.find(x=>x.id===id); if(s){ s.paymentStatus='Blocked'; saveDB(); renderAdminBody(); } }
+function deleteStudent(id){
+  if(!confirm('Are you sure you want to delete this student record? This cannot be undone.')) return;
+  DB.students = DB.students.filter(s=>s.id!==id); saveDB(); renderAdminBody();
+}
 function exportStudentsExcel(){
   const rows = DB.students.map((s,i)=>({SerialNo:i+1, Name:s.name, Phone:s.phone, Email:s.email, Address:s.address, JoinDate:s.joinDate, PaymentStatus:s.paymentStatus, Batch:s.batch}));
   const ws = XLSX.utils.json_to_sheet(rows); const wb = XLSX.utils.book_new();
@@ -2308,6 +2429,7 @@ function adminResultsView(){
       <option value="english">English</option>
       <option value="reasoning">Reasoning</option>
       <option value="gk">General Knowledge (GK)</option>
+      <option value="science">Science</option>
       <option value="full">Full Combined Mock</option>
     </select>
     <select id="resTestSel" class="rounded-lg px-3 py-2 text-xs"><option value="all">All Tests</option></select>
@@ -2358,7 +2480,7 @@ function exportResultsExcel(){
 /* --- Mock/PYQ Manager: create, edit, delete tests & questions --- */
 let qbSubject='math', qbTestId=null;
 function adminQuestionsView(){
-  const subjects=['math','english','reasoning','gk','full'];
+  const subjects=['math','english','reasoning','gk','science','full'];
   const tests = DB.mockTests[qbSubject]||[];
   if(!qbTestId && tests.length) qbTestId = tests[0].id;
   const test = tests.find(t=>t.id===qbTestId);
@@ -2413,7 +2535,9 @@ function currentTestRef(kind){
 function addNewMockTest(){
   const title = prompt('Test title:'); if(!title) return;
   const examCategory = prompt('Exam category (e.g. "All Exams", "WBP Constable", "Railway (RRB)", "SSC GD"):', 'All Exams') || 'All Exams';
-  const nt = {id:uid('mt'), subject:qbSubject, title, isDemo:false, examCategory, durationMin:20, marksCorrect:2, marksWrong:0.5, questions:[]};
+  const durationInput = prompt('Test duration (in minutes):', '20');
+  const durationMin = durationInput!==null && parseFloat(durationInput)>0 ? parseFloat(durationInput) : 20;
+  const nt = {id:uid('mt'), subject:qbSubject, title, isDemo:false, examCategory, durationMin, marksCorrect:2, marksWrong:0.5, questions:[]};
   DB.mockTests[qbSubject].push(nt); qbTestId=nt.id; saveDB(); renderAdminBody();
 }
 function toggleDemoFlag(){ const test = currentTestRef('mock'); if(test){ test.isDemo=!test.isDemo; saveDB(); renderAdminBody(); } }
@@ -2563,7 +2687,9 @@ function addNewPyqSet(){
   const title = prompt('PYQ Set title (e.g. "WBP Constable PYQ 2025"):'); if(!title) return;
   const examCategory = prompt('Exam category:', DB.examCategories[0]||'WBP Constable') || DB.examCategories[0];
   const year = prompt('Year (e.g. 2025):', '2025') || '2025';
-  const nt = {id:uid('pyq'), title, examCategory, year, durationMin:30, marksCorrect:1, marksWrong:0.25, questions:[]};
+  const durationInput = prompt('Test duration (in minutes):', '30');
+  const durationMin = durationInput!==null && parseFloat(durationInput)>0 ? parseFloat(durationInput) : 30;
+  const nt = {id:uid('pyq'), title, examCategory, year, durationMin, marksCorrect:1, marksWrong:0.25, questions:[]};
   DB.pyqSets.push(nt); pyqAdminId=nt.id; saveDB(); renderAdminBody();
 }
 function editPyqMeta(){
@@ -2582,6 +2708,17 @@ function removeExamCategory(c){ if(!confirm('Remove category "'+c+'"?')) return;
 /* --- GK Quiz Uploader (dedicated, tags quizPool subject='gk') --- */
 function adminGkQuizView(){
   return `
+  <div class="card2 rounded-xl p-4 mb-4">
+    <p class="text-xs font-bold muted uppercase mb-2">Quick Quiz Duration (minutes per mode)</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+      ${["5","10","15","20"].map(q=>`
+        <div>
+          <label class="text-[10px] muted block mb-1">${q} Questions</label>
+          <input type="number" min="1" step="1" value="${DB.quizDurations[q]}" onchange="updateQuizDuration('${q}', this.value)" class="w-full rounded-lg px-3 py-2 text-xs">
+        </div>`).join('')}
+    </div>
+    <p class="text-[11px] muted">Sets the exact time limit (in minutes) students get for each Quick Quiz length.</p>
+  </div>
   <div class="card2 rounded-xl p-4 mb-4">
     <p class="text-xs font-bold muted uppercase mb-2">Upload Quiz Questions (GK Only) — Single Entry</p>
     <div class="grid sm:grid-cols-2 gap-2 mb-2">
@@ -2611,6 +2748,12 @@ function adminGkQuizView(){
         <button onclick="deleteGkQuizQuestion('${q.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
       </div>`).join('')}
   </div>`;
+}
+function updateQuizDuration(qCount, minutes){
+  const val = parseFloat(minutes);
+  if(!(val>0)) return;
+  DB.quizDurations[qCount] = val;
+  saveDB();
 }
 function addGkQuizQuestion(){
   const en=document.getElementById('gk_en').value.trim(), bn=document.getElementById('gk_bn').value.trim();
