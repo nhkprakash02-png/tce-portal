@@ -276,7 +276,14 @@ const CUR_KEY = 'currentUser';
 const ADM_KEY = 'tce_admin_session_v1';
 function uid(prefix){ return prefix+'_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
 function priceLabel(p){ return '₹'+p+' / Month'; }
+function defaultBatchFeatures(){ return ['Full access to all Mocks','PYQ Hub with multi-attempt analysis','Daily Quizzes','Detailed Analysis','Unlimited Re-attempts']; }
 
+// Mock Tests sub-category bifurcation (Mock Tests only — not used by PYQ, Quiz, or Study Materials).
+const SUBCATEGORIES = {
+  science: ['Physics','Chemistry','Biology'],
+  gk: ['History','Geography','Polity','Economy'],
+  english: ['Grammar','Vocabulary']
+};
 function seedDB(){
   const subjects = ['math','english','reasoning','gk','science','full'];
   const subjectLabel = {math:'Math',english:'English',reasoning:'Reasoning',gk:'GK',science:'Science',full:'Full Mock'};
@@ -338,6 +345,7 @@ function seedDB(){
     mockTests[sub] = [1,2,3].map(n=>({
       id: uid('mt'), subject: sub, title: `${subjectLabel[sub]} Mock Test ${n}`, isDemo: n===1, examCategory:"All Exams",
       durationMin: sub==='full' ? 60 : 20, marksCorrect: 2, marksWrong: 0.5,
+      subCategory: SUBCATEGORIES[sub] ? SUBCATEGORIES[sub][(n-1) % SUBCATEGORIES[sub].length] : undefined,
       questions: sampleQ(sub, sub==='full'?10:8)
     }));
   });
@@ -414,7 +422,10 @@ function normalizeDB(db){
   });
   if(db.mockTests && !db.mockTests.science) db.mockTests.science = []; // "Science" subject introduced later
   if(!db.quizDurations) db.quizDurations = {"5":3, "10":7, "15":10, "20":12};
-  (db.batches||[]).forEach(b=>{ if(!b.examCategory) b.examCategory = "All Exams"; b.price = 300; }); // pricing standardized portal-wide at ₹300 / Month
+  (db.batches||[]).forEach(b=>{
+    if(!b.examCategory) b.examCategory = "All Exams"; b.price = 300; // pricing standardized portal-wide at ₹300 / Month
+    if(!b.features || !b.features.length || (b.features.length===1 && b.features[0]==='Full access to batch resources')) b.features = defaultBatchFeatures();
+  });
   if(!db.examCategories || !db.examCategories.includes("Railway (RRB)")){
     db.examCategories = db.examCategories || [];
     db.examCategories = db.examCategories.filter(c=>c!=="Railway");
@@ -1128,7 +1139,7 @@ function tplHome(){
             ${b.examCategory && b.examCategory!=='All Exams' ? `<span class="badge bg-sky-500/15 text-sky-400 shrink-0">${b.examCategory}</span>` : ''}
           </div>
           <p class="gold-text font-display font-800 text-xl mb-3">${priceLabel(b.price)}</p>
-          <ul class="text-xs muted space-y-1 mb-4">${b.features.slice(0,3).map(f=>`<li class="flex gap-1.5 items-center"><i data-lucide="check" class="w-3 h-3 gold-text"></i>${f}</li>`).join('')}</ul>
+          <ul class="text-xs muted space-y-1 mb-4">${(b.features&&b.features.length?b.features:defaultBatchFeatures()).slice(0,3).map(f=>`<li class="flex gap-1.5 items-center"><i data-lucide="check" class="w-3 h-3 gold-text"></i>${f}</li>`).join('')}</ul>
           <button onclick="openEnrollModal('batch','${b.id}')" class="mt-auto btn-gold rounded-lg py-2 text-xs font-bold">Enroll Now</button>
         </div>`).join('') : '<p class="muted text-sm col-span-full">No active batches available right now.</p>')}
     </div>
@@ -1143,7 +1154,7 @@ function tplHome(){
 }
 
 /* ---------- MOCK TESTS TAB (search + subject tabs) ---------- */
-let mockSubjectTab = 'math'; let mockSearchQ=''; let mockExamFilter='all';
+let mockSubjectTab = 'math'; let mockSearchQ=''; let mockExamFilter='all'; let mockSubCategory='all';
 function tplMocks(){
   const subjects = [['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['science','Science'],['full','Full Mock']];
   return `
@@ -1154,9 +1165,9 @@ function tplMocks(){
     </div>
     <span class="badge bg-red-500/15 text-red-400 w-fit">🔒 Paid / Enrolled Students Only (except Free Demo)</span>
   </div>
-  <div class="flex flex-col sm:flex-row gap-3 mb-6">
+  <div class="flex flex-col sm:flex-row gap-3 mb-3">
     <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 flex-1">
-      ${subjects.map(s=>`<button onclick="mockSubjectTab='${s[0]}';initMocksTab()" id="mst_${s[0]}" class="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap ${mockSubjectTab===s[0]?'tab-active':'card2 muted'}">${s[1]}</button>`).join('')}
+      ${subjects.map(s=>`<button onclick="mockSubjectTab='${s[0]}';mockSubCategory='all';renderTab()" id="mst_${s[0]}" class="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap ${mockSubjectTab===s[0]?'tab-active':'card2 muted'}">${s[1]}</button>`).join('')}
     </div>
     <select id="mockExamFilterSel" onchange="mockExamFilter=this.value;initMocksTab()" class="rounded-lg px-3 py-2 text-xs">
       <option value="all">All Exam Categories</option>
@@ -1167,21 +1178,40 @@ function tplMocks(){
       <input type="text" placeholder="Search test title..." oninput="mockSearchQ=this.value;initMocksTab()" class="w-full rounded-lg pl-9 pr-3 py-2 text-xs">
     </div>
   </div>
+  ${SUBCATEGORIES[mockSubjectTab] ? `
+  <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-6">
+    <button onclick="mockSubCategory='all';initMocksTab()" id="msc_all" class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${mockSubCategory==='all'?'tab-active':'card2 muted'}">All</button>
+    ${SUBCATEGORIES[mockSubjectTab].map(sc=>`<button onclick="mockSubCategory='${sc}';initMocksTab()" id="msc_${sc.replace(/\s+/g,'_')}" class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${mockSubCategory===sc?'tab-active':'card2 muted'}">${sc}</button>`).join('')}
+  </div>` : '<div class="mb-6"></div>'}
   <div id="mocksList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
 }
-function openLatestAnalysis(testId){
+function openAttemptSelector(testId){
   const user = getCurrentUser(); if(!user) return;
-  const subs = DB.submissions.filter(s=>s.testId===testId && s.studentId===user.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const subs = DB.submissions.filter(s=>s.testId===testId && s.studentId===user.id).sort((a,b)=>b.attempt-a.attempt);
   if(subs.length===0){ alert('No attempt found for this test yet.'); return; }
-  renderResultScreen(subs[0]);
+  if(subs.length===1){ renderResultScreen(subs[0]); return; }
+  openModal(`
+    <div class="card glow-border rounded-2xl p-6">
+      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Select an Attempt to Analyze</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="space-y-2">
+        ${subs.map(s=>`
+          <button onclick="closeModal();renderResultScreen(DB.submissions.find(x=>x.id==='${s.id}'))" class="w-full text-left card2 rounded-lg px-4 py-3 flex items-center justify-between gap-3 hover:ring-1 hover:ring-amber-500">
+            <div><p class="text-sm font-semibold">Attempt ${s.attempt}</p><p class="text-[11px] muted">${new Date(s.date).toLocaleString()} • Accuracy ${s.accuracy}%</p></div>
+            <span class="gold-text font-bold text-sm shrink-0">${s.score}/${s.maxScore}</span>
+          </button>`).join('')}
+      </div>
+    </div>`);
 }
 function initMocksTab(){
   document.querySelectorAll('[id^="mst_"]').forEach(b=>b.classList.remove('tab-active'));
   const active = document.getElementById('mst_'+mockSubjectTab); if(active) active.classList.add('tab-active');
+  document.querySelectorAll('[id^="msc_"]').forEach(b=>b.classList.remove('tab-active'));
+  const activeSc = document.getElementById('msc_'+(mockSubCategory==='all'?'all':mockSubCategory.replace(/\s+/g,'_'))); if(activeSc) activeSc.classList.add('tab-active');
   const list = document.getElementById('mocksList');
   let tests = DB.mockTests[mockSubjectTab]||[];
   if(mockSearchQ.trim()) tests = tests.filter(t=>t.title.toLowerCase().includes(mockSearchQ.trim().toLowerCase()));
   if(mockExamFilter!=='all') tests = tests.filter(t=>(t.examCategory||'All Exams')===mockExamFilter || (t.examCategory||'All Exams')==='All Exams');
+  if(mockSubCategory!=='all') tests = tests.filter(t=>t.subCategory===mockSubCategory);
   const enrolled = isEnrolled() || isAdmin();
   const user = getCurrentUser();
   list.innerHTML = tests.length ? tests.map((t)=>{
@@ -1191,6 +1221,7 @@ function initMocksTab(){
     <div class="card glow-border rounded-2xl p-5 flex flex-col">
       <div class="flex justify-between items-start mb-2 gap-2 flex-wrap">
         <span class="badge ${t.isDemo?'bg-emerald-500/20 text-emerald-400':'bg-amber-500/15 gold-text'}">${t.isDemo?'FREE DEMO':'PREMIUM'}</span>
+        ${t.subCategory ? `<span class="badge bg-purple-500/15 text-purple-400">${t.subCategory}</span>` : ''}
         ${t.examCategory && t.examCategory!=='All Exams' ? `<span class="badge bg-sky-500/15 text-sky-400">${t.examCategory}</span>` : ''}
         ${locked?'<span class="badge bg-red-500/15 text-red-400">🔒 Locked</span>':''}
       </div>
@@ -1200,7 +1231,7 @@ function initMocksTab(){
       ${(attempts>0 && !locked) ? `
       <div class="mt-auto grid grid-cols-2 gap-2">
         <button onclick="showPreExamInstructions('${t.id}','mock','${mockSubjectTab}')" class="btn-gold rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="repeat" class="w-3.5 h-3.5"></i>Re-attempt</button>
-        <button onclick="openLatestAnalysis('${t.id}')" class="btn-ghost rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Analysis</button>
+        <button onclick="openAttemptSelector('${t.id}')" class="btn-ghost rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Analysis</button>
       </div>` : `
       <button onclick="${locked?`openEnrollModal('locked')`:`showPreExamInstructions('${t.id}','mock','${mockSubjectTab}')`}" class="mt-auto ${locked?'btn-ghost':'btn-gold'} rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1.5">
         <i data-lucide="${locked?'lock':'play'}" class="w-3.5 h-3.5"></i>
@@ -1256,7 +1287,7 @@ function initPyqTab(){
       ${attempts>0 ? `
       <div class="mt-auto grid grid-cols-2 gap-2">
         <button onclick="showPreExamInstructions('${p.id}','pyq')" class="btn-gold rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="repeat" class="w-3.5 h-3.5"></i>Re-attempt</button>
-        <button onclick="openLatestAnalysis('${p.id}')" class="btn-ghost rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Analysis</button>
+        <button onclick="openAttemptSelector('${p.id}')" class="btn-ghost rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Analysis</button>
       </div>` : `
       <button onclick="showPreExamInstructions('${p.id}','pyq')" class="mt-auto btn-gold rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1.5">
         <i data-lucide="play" class="w-3.5 h-3.5"></i>Start Test
@@ -1962,13 +1993,23 @@ function tplQuiz(){
 }
 function initQuizTab(){
   const modes = [5,10,15,20].map(q=>[q, DB.quizDurations[String(q)] || Math.ceil(q*0.6)]);
-  document.getElementById('quizModes').innerHTML = modes.map(([q,m])=>`
+  const user = getCurrentUser();
+  document.getElementById('quizModes').innerHTML = modes.map(([q,m])=>{
+    const testId = 'quiz_'+q;
+    const attempts = user ? DB.submissions.filter(s=>s.testId===testId && s.studentId===user.id).length : 0;
+    return `
     <div class="card glow-border rounded-2xl p-5 text-center">
       <i data-lucide="zap" class="w-6 h-6 gold-text mx-auto mb-2"></i>
       <p class="font-display font-800 text-xl">${q} Qs</p>
       <p class="text-xs muted mb-4">${m} minutes</p>
-      <button onclick="showQuizInstructions(${q},${m})" class="w-full btn-gold rounded-lg py-2.5 text-xs font-bold">Start Quiz</button>
-    </div>`).join('');
+      ${attempts>0?`<p class="text-[11px] muted mb-2">Attempts so far: <span class="gold-text font-semibold">${attempts}</span></p>`:''}
+      ${attempts>0 ? `
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="showQuizInstructions(${q},${m})" class="btn-gold rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="repeat" class="w-3.5 h-3.5"></i>Re-attempt</button>
+        <button onclick="openAttemptSelector('${testId}')" class="btn-ghost rounded-lg py-2.5 text-xs font-bold flex items-center justify-center gap-1"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>Analysis</button>
+      </div>` : `<button onclick="showQuizInstructions(${q},${m})" class="w-full btn-gold rounded-lg py-2.5 text-xs font-bold">Start Quiz</button>`}
+    </div>`;
+  }).join('');
   lucide.createIcons();
 }
 function showQuizInstructions(qCount, mins){
@@ -2156,7 +2197,7 @@ function tplBatches(){
       </div>
       <div class="p-6 sm:p-8">
         <h4 class="font-semibold text-sm mb-3">What's Included</h4>
-        <ul class="space-y-2 text-sm muted">${b.features.map(f=>`<li class="flex gap-2 items-center"><i data-lucide="check-circle" class="w-4 h-4 gold-text"></i>${f}</li>`).join('')}</ul>
+        <ul class="space-y-2 text-sm muted">${(b.features&&b.features.length?b.features:defaultBatchFeatures()).map(f=>`<li class="flex gap-2 items-center"><i data-lucide="check-circle" class="w-4 h-4 gold-text"></i>${f}</li>`).join('')}</ul>
       </div>
       <div class="px-6 sm:px-8 pb-8">
         <button onclick="openEnrollModal('batch','${b.id}')" class="w-full sm:w-auto btn-gold rounded-lg px-8 py-3 text-sm font-bold">Enroll Now — ${priceLabel(b.price)}</button>
@@ -2486,8 +2527,14 @@ function adminQuestionsView(){
   const test = tests.find(t=>t.id===qbTestId);
   return `
   <div class="flex flex-wrap gap-2 mb-4">${subjects.map(s=>`<button onclick="qbSubject='${s}';qbTestId=null;renderAdminBody()" class="px-3 py-1.5 rounded-lg text-xs font-bold ${qbSubject===s?'tab-active':'card2 muted'}">${s.toUpperCase()}</button>`).join('')}</div>
+  ${SUBCATEGORIES[qbSubject] ? `
   <div class="flex flex-wrap gap-2 mb-4 items-center">
-    <select onchange="qbTestId=this.value;renderAdminBody()" class="rounded-lg px-3 py-2 text-xs">${tests.map(t=>`<option value="${t.id}" ${t.id===qbTestId?'selected':''}>${t.title} ${t.isDemo?'(Free Demo)':''}</option>`).join('')}</select>
+    <span class="text-[11px] font-bold muted uppercase">Sub-category:</span>
+    ${SUBCATEGORIES[qbSubject].map(sc=>`<span class="badge card2 muted">${sc}</span>`).join('')}
+    <span class="text-[11px] muted">— set per test below via "+ New Test" or "Edit Test Info"</span>
+  </div>` : ''}
+  <div class="flex flex-wrap gap-2 mb-4 items-center">
+    <select onchange="qbTestId=this.value;renderAdminBody()" class="rounded-lg px-3 py-2 text-xs">${tests.map(t=>`<option value="${t.id}" ${t.id===qbTestId?'selected':''}>${t.title}${t.subCategory?' — '+t.subCategory:''} ${t.isDemo?'(Free Demo)':''}</option>`).join('')}</select>
     <button onclick="addNewMockTest()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">+ New Test</button>
     ${test?`
     <button onclick="toggleDemoFlag()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">${test.isDemo?'Mark as Premium':'Mark as Free Demo'}</button>
@@ -2532,12 +2579,25 @@ function currentTestRef(kind){
   if(kind==='pyq') return DB.pyqSets.find(t=>t.id===pyqAdminId);
   return null;
 }
+function promptSubCategory(subject, currentValue){
+  const opts = SUBCATEGORIES[subject];
+  if(!opts) return undefined;
+  const list = opts.map((o,i)=>`${i+1}. ${o}`).join('\n');
+  const input = prompt(`Choose a sub-category for ${subject.toUpperCase()}:\n${list}\n\nEnter the number or name:`, currentValue || opts[0]);
+  if(input===null) return currentValue; // cancelled — keep existing value (or undefined for a new test)
+  const trimmed = input.trim();
+  const byNumber = opts[parseInt(trimmed,10)-1];
+  if(byNumber) return byNumber;
+  const byName = opts.find(o=>o.toLowerCase()===trimmed.toLowerCase());
+  return byName || opts[0];
+}
 function addNewMockTest(){
   const title = prompt('Test title:'); if(!title) return;
   const examCategory = prompt('Exam category (e.g. "All Exams", "WBP Constable", "Railway (RRB)", "SSC GD"):', 'All Exams') || 'All Exams';
   const durationInput = prompt('Test duration (in minutes):', '20');
   const durationMin = durationInput!==null && parseFloat(durationInput)>0 ? parseFloat(durationInput) : 20;
-  const nt = {id:uid('mt'), subject:qbSubject, title, isDemo:false, examCategory, durationMin, marksCorrect:2, marksWrong:0.5, questions:[]};
+  const subCategory = promptSubCategory(qbSubject);
+  const nt = {id:uid('mt'), subject:qbSubject, title, isDemo:false, examCategory, durationMin, subCategory, marksCorrect:2, marksWrong:0.5, questions:[]};
   DB.mockTests[qbSubject].push(nt); qbTestId=nt.id; saveDB(); renderAdminBody();
 }
 function toggleDemoFlag(){ const test = currentTestRef('mock'); if(test){ test.isDemo=!test.isDemo; saveDB(); renderAdminBody(); } }
@@ -2548,6 +2608,7 @@ function editTestMeta(){
   const dur = prompt('Duration (minutes):', test.durationMin); if(dur===null) return;
   const mc = prompt('Marks for correct answer:', test.marksCorrect); if(mc===null) return;
   const mw = prompt('Negative marking for wrong answer (e.g. 0, 0.25, 0.33, 0.5):', test.marksWrong); if(mw===null) return;
+  if(SUBCATEGORIES[qbSubject]) test.subCategory = promptSubCategory(qbSubject, test.subCategory);
   test.title = title.trim()||test.title; test.examCategory = examCategory.trim()||test.examCategory; test.durationMin = parseFloat(dur)||test.durationMin; test.marksCorrect = parseFloat(mc)||test.marksCorrect; test.marksWrong = parseFloat(mw)>=0? parseFloat(mw) : test.marksWrong;
   saveDB(); renderAdminBody();
 }
@@ -2850,7 +2911,9 @@ function addBatch(){
   const name = prompt('Batch name (e.g. "SSC GD Special"):'); if(!name) return;
   const examCategory = prompt('Exam category tag (e.g. "WBP Constable", "Railway (RRB)", "SSC GD"):', 'All Exams') || 'All Exams';
   // Pricing is standardized across the portal at ₹300 / Month for every batch.
-  DB.batches.push({id:uid('bt'), name, price:300, active:true, examCategory, features:['Full access to batch resources'], timetable:[['Mon-Fri','Regular Classes']]});
+  DB.batches.push({id:uid('bt'), name, price:300, active:true, examCategory,
+    features:['Full access to all Mocks','PYQ Hub with multi-attempt analysis','Daily Quizzes','Detailed Analysis','Unlimited Re-attempts'],
+    timetable:[['Mon-Fri','Regular Classes']]});
   saveDB(); renderAdminBody();
 }
 function editBatch(id){
