@@ -77,6 +77,7 @@
   .hide-scrollbar::-webkit-scrollbar{ display:none; }
   .hide-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
   @keyframes slideFade{ from{opacity:0; transform: translateX(20px);} to{opacity:1; transform: translateX(0);} }
+  .menu-item-anim{ animation: slideFade .32s ease both; }
   @keyframes tickerMove{ 0%{ transform:translateX(100%);} 100%{ transform:translateX(-100%);} }
   .ticker-track{ display:inline-block; white-space:nowrap; animation: tickerMove 32s linear infinite; }
   .watermark-wrap{ position:relative; overflow:hidden; }
@@ -152,6 +153,7 @@
   </div>
   <div id="mobileMenu" class="hidden xl:hidden px-4 pb-3 flex flex-col gap-1" style="border-top:1px solid var(--border);"></div>
 </header>
+<div id="mobileMenuBackdrop" onclick="toggleMobileMenu()" class="hidden xl:hidden fixed inset-0 z-30 modal-backdrop"></div>
 
 <!-- =============== TICKER =============== -->
 <div class="gold-grad text-ink text-xs sm:text-sm font-semibold overflow-hidden py-1.5">
@@ -406,6 +408,7 @@ function seedDB(){
       english:[{id:uid('mat'), title:"English Grammar Notes (Demo)", url:"", views:0}],
       reasoning:[{id:uid('mat'), title:"Reasoning Shortcuts (Demo)", url:"", views:0}],
       gk:[{id:uid('mat'), title:"GK Capsule 2026 (Demo)", url:"", views:0}],
+      science:[{id:uid('mat'), title:"Science Notes (Demo)", url:"", views:0}],
       currentAffairs:[{id:uid('mat'), title:"Current Affairs — August 2026 (Demo)", url:"", views:0}]
     },
     notices: [
@@ -445,6 +448,12 @@ function normalizeDB(db){
   // real demo tests (with Physics/Chemistry/Biology sub-categories) a fresh install would get.
   if(db.mockTests && (!db.mockTests.science || !db.mockTests.science.length)){
     db.mockTests.science = seedDB().mockTests.science;
+  }
+  // Same situation as above, but for Study Materials: "Science" is a brand-new materials
+  // category, so any database that existed before it was introduced needs it backfilled or
+  // the Science tab in Study Materials (admin + student) would look empty/broken.
+  if(db.materials && (!db.materials.science || !db.materials.science.length)){
+    db.materials.science = seedDB().materials.science;
   }
   if(!db.quizDurations) db.quizDurations = {"5":3, "10":7, "15":10, "20":12};
   (db.batches||[]).forEach(b=>{
@@ -640,6 +649,11 @@ function attachDbRealtimeListeners(){
           DB.mockTests.science = seedDB().mockTests.science;
           writeKeyValue('mockTests', DB.mockTests).catch(()=>{});
         }
+        // Same fix, for the same reason, for the new Science Study Materials category.
+        if(key==='materials' && (!DB.materials.science || !DB.materials.science.length)){
+          DB.materials.science = seedDB().materials.science;
+          writeKeyValue('materials', DB.materials).catch(()=>{});
+        }
         if(changed) handleRemoteDbChange();
       }catch(e){ console.warn('Live sync reassembly failed for '+key, e); }
     }, err=> console.warn('Live sync listener error for '+key+':', err));
@@ -703,7 +717,22 @@ function renderNav(){
 
   lucide.createIcons();
 }
-function toggleMobileMenu(){ document.getElementById('mobileMenu').classList.toggle('hidden'); }
+function toggleMobileMenu(){
+  const menu = document.getElementById('mobileMenu');
+  const backdrop = document.getElementById('mobileMenuBackdrop');
+  const opening = menu.classList.contains('hidden');
+  menu.classList.toggle('hidden');
+  if(backdrop) backdrop.classList.toggle('hidden', !opening);
+  document.body.classList.toggle('overflow-hidden', opening);
+  if(opening){
+    // Staggered right-to-left cascade for each menu item as the panel opens.
+    Array.from(menu.children).forEach((el,i)=>{
+      el.classList.remove('menu-item-anim'); void el.offsetWidth; // reflow so the animation can replay every time the menu opens
+      el.style.animationDelay = (i*0.06)+'s';
+      el.classList.add('menu-item-anim');
+    });
+  }
+}
 function goHome(){ setTab('home'); }
 function updateHomeOnlySectionsVisibility(){
   const isHome = activeTab==='home';
@@ -2139,9 +2168,17 @@ function beginQuickQuiz(qCount, mins){
 }
 
 /* ---------- STUDY MATERIALS TAB (5 categories + view counters) ---------- */
-let materialCat = 'math';
+let materialCat = 'math'; let materialSubCat = 'all';
+// Study Materials sub-category bifurcation (Study Materials only — mirrors, but is kept
+// separate from, the Mock Tests SUBCATEGORIES map above, since that map is explicitly
+// documented as "not used by ... Study Materials").
+const MATERIAL_SUBCATEGORIES = {
+  english: ['Grammar','Vocabulary'],
+  gk: ['History','Economy','Polity','Geography'],
+  science: ['Physics','Chemistry','Biology']
+};
 function tplMaterials(){
-  const cats = [['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['currentAffairs','Current Affairs']];
+  const cats = [['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['science','Science'],['currentAffairs','Current Affairs']];
   return `
   <div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
     <div>
@@ -2150,20 +2187,29 @@ function tplMaterials(){
     </div>
     <span class="badge bg-emerald-500/20 text-emerald-400 w-fit">✅ 100% FREE — View &amp; Download for Everyone</span>
   </div>
-  <div class="flex gap-2 mb-6 flex-wrap">
-    ${cats.map(c=>`<button onclick="materialCat='${c[0]}';initMaterialsTab()" id="mc_${c[0]}" class="px-4 py-2 rounded-lg text-xs font-bold ${materialCat===c[0]?'tab-active':'card2 muted'}">${c[1]}</button>`).join('')}
+  <div class="flex gap-2 mb-3 flex-wrap">
+    ${cats.map(c=>`<button onclick="materialCat='${c[0]}';materialSubCat='all';renderTab()" id="mc_${c[0]}" class="px-4 py-2 rounded-lg text-xs font-bold ${materialCat===c[0]?'tab-active':'card2 muted'}">${c[1]}</button>`).join('')}
   </div>
+  ${MATERIAL_SUBCATEGORIES[materialCat] ? `
+  <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-6">
+    <button onclick="materialSubCat='all';initMaterialsTab()" id="msub_all" class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${materialSubCat==='all'?'tab-active':'card2 muted'}">All</button>
+    ${MATERIAL_SUBCATEGORIES[materialCat].map(sc=>`<button onclick="materialSubCat='${sc}';initMaterialsTab()" id="msub_${sc.replace(/\s+/g,'_')}" class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap ${materialSubCat===sc?'tab-active':'card2 muted'}">${sc}</button>`).join('')}
+  </div>` : '<div class="mb-6"></div>'}
   <div id="materialsList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
 }
 function initMaterialsTab(){
   document.querySelectorAll('[id^="mc_"]').forEach(b=>b.classList.remove('tab-active'));
   const active = document.getElementById('mc_'+materialCat); if(active) active.classList.add('tab-active');
+  document.querySelectorAll('[id^="msub_"]').forEach(b=>b.classList.remove('tab-active'));
+  const activeSub = document.getElementById('msub_'+(materialSubCat==='all'?'all':materialSubCat.replace(/\s+/g,'_'))); if(activeSub) activeSub.classList.add('tab-active');
   const list = document.getElementById('materialsList');
-  const mats = DB.materials[materialCat]||[];
+  let mats = DB.materials[materialCat]||[];
+  if(materialSubCat!=='all') mats = mats.filter(m=>m.subCategory===materialSubCat);
   list.innerHTML = mats.length? mats.map(m=>`
     <div class="card glow-border rounded-2xl p-5">
       <i data-lucide="file-text" class="w-8 h-8 gold-text mb-3"></i>
       <h3 class="font-display font-700 text-sm mb-1">${m.title}</h3>
+      ${m.subCategory ? `<span class="badge bg-purple-500/15 text-purple-400 mb-2 inline-block">${m.subCategory}</span>` : ''}
       <p class="text-[10px] muted mb-3 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i>${m.views||0} views</p>
       <div class="flex gap-2">
         <button onclick="previewMaterial('${m.id}','${materialCat}')" class="flex-1 btn-ghost rounded-lg py-2 text-xs font-bold">Preview</button>
@@ -2227,6 +2273,13 @@ async function previewMaterial(id, cat){
   const user = getCurrentUser();
   if(!user){ alert('Please login to view watermarked materials.'); openLoginModal(); return; }
   incrementMaterialView(id, cat);
+  // A material set via a pasted link (as opposed to an actual uploaded PDF file, which is
+  // stored as a "data:" URL) isn't real PDF bytes we can watermark — open the link itself
+  // instead of falling back to a placeholder PDF page.
+  if(mat && mat.url && !mat.url.startsWith('data:')){
+    window.open(mat.url, '_blank');
+    return;
+  }
   const bytes = await buildWatermarkedPdfBytes(mat);
   const blob = new Blob([bytes], {type:'application/pdf'});
   const url = URL.createObjectURL(blob);
@@ -2244,6 +2297,13 @@ async function downloadMaterial(id, cat){
   const mat = (DB.materials[cat]||[]).find(m=>m.id===id);
   const user = getCurrentUser();
   if(!user){ alert('Please login to download watermarked materials.'); openLoginModal(); return; }
+  // Same reasoning as previewMaterial(): a pasted link has no PDF bytes to watermark, so
+  // trigger a direct download of the actual file instead of generating a placeholder PDF.
+  if(mat && mat.url && !mat.url.startsWith('data:')){
+    const a = document.createElement('a'); a.href = mat.url; a.download = mat.title.replace(/\s+/g,'_')+'_TCE'; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    return;
+  }
   const bytes = await buildWatermarkedPdfBytes(mat);
   const blob = new Blob([bytes], {type:'application/pdf'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = mat.title.replace(/\s+/g,'_')+'_TCE.pdf'; a.click();
@@ -2923,13 +2983,16 @@ function deleteGkQuizQuestion(qid){ if(!confirm('Delete this GK question?')) ret
 
 /* --- Materials (5 categories incl. Current Affairs) --- */
 function adminMaterialsView(){
-  const cats=[['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['currentAffairs','Current Affairs']];
+  const cats=[['math','Math'],['english','English'],['reasoning','Reasoning'],['gk','GK'],['science','Science'],['currentAffairs','Current Affairs']];
   return `
   <div class="card2 rounded-xl p-4 mb-6">
     <p class="text-xs font-bold muted uppercase mb-3">Upload Study Material (PDF)</p>
     <div class="grid sm:grid-cols-2 gap-2 mb-2">
       <input id="newMatTitle" type="text" placeholder="Material Title" class="rounded-lg px-3 py-2 text-xs">
-      <select id="newMatCat" class="rounded-lg px-3 py-2 text-xs">${cats.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join('')}</select>
+      <select id="newMatCat" onchange="updateMatSubCatOptions()" class="rounded-lg px-3 py-2 text-xs">${cats.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join('')}</select>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-2 mb-2">
+      <select id="newMatSubCat" class="rounded-lg px-3 py-2 text-xs hidden"></select>
     </div>
     <div class="grid sm:grid-cols-2 gap-2 mb-2 items-center">
       <label class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer">
@@ -2946,21 +3009,38 @@ function adminMaterialsView(){
       <div class="card2 rounded-xl p-4">
         <p class="text-xs font-bold muted uppercase mb-2">${c[1]}</p>
         <div class="space-y-1">
-          ${(DB.materials[c[0]]||[]).map(m=>`<div class="flex justify-between items-center text-xs card rounded-md px-2 py-1.5"><span>${m.title} <span class="muted">(${m.views||0} views${m.url?', file attached':', no file yet'})</span></span><button onclick="deleteMaterial('${c[0]}','${m.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('') || '<p class="text-[11px] muted">None yet</p>'}
+          ${(DB.materials[c[0]]||[]).map(m=>`<div class="flex justify-between items-center text-xs card rounded-md px-2 py-1.5"><span>${m.title}${m.subCategory?' — '+m.subCategory:''} <span class="muted">(${m.views||0} views${m.url?', file attached':', no file yet'})</span></span><button onclick="deleteMaterial('${c[0]}','${m.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('') || '<p class="text-[11px] muted">None yet</p>'}
         </div>
       </div>`).join('')}
   </div>`;
 }
+// Populates/shows the sub-category dropdown in the uploader form when a category that has
+// sub-categories (English, GK, Science) is chosen, and hides it otherwise.
+function updateMatSubCatOptions(){
+  const catEl = document.getElementById('newMatCat');
+  const sel = document.getElementById('newMatSubCat');
+  if(!catEl || !sel) return;
+  const opts = MATERIAL_SUBCATEGORIES[catEl.value];
+  if(opts){
+    sel.innerHTML = '<option value="">No sub-category</option>' + opts.map(o=>`<option value="${o}">${o}</option>`).join('');
+    sel.classList.remove('hidden');
+  } else {
+    sel.innerHTML = '';
+    sel.classList.add('hidden');
+  }
+}
 function uploadMaterial(){
   const title = document.getElementById('newMatTitle').value.trim();
   const cat = document.getElementById('newMatCat').value;
+  const subCatEl = document.getElementById('newMatSubCat');
+  const subCategory = (subCatEl && !subCatEl.classList.contains('hidden') && subCatEl.value) ? subCatEl.value : undefined;
   const url = document.getElementById('newMatUrl').value.trim();
   const fileInput = document.getElementById('newMatFile');
   const file = fileInput.files && fileInput.files[0];
   if(!title){ alert('Please enter a material title.'); return; }
   if(!DB.materials[cat]) DB.materials[cat] = [];
   const finalize = (fileUrl)=>{
-    DB.materials[cat].push({id:uid('mat'), title, url: fileUrl||'', views:0});
+    DB.materials[cat].push({id:uid('mat'), title, url: fileUrl||'', subCategory, views:0});
     saveDB(); renderAdminBody();
   };
   if(file){
