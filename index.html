@@ -628,6 +628,18 @@ function attachDbRealtimeListeners(){
         // would re-trigger a re-render and could wipe an admin form mid-edit.
         const changed = JSON.stringify(DB[key]) !== JSON.stringify(incoming);
         DB[key] = incoming;
+        // This live listener replaces DB.mockTests wholesale with whatever is stored in
+        // Firestore, which can bypass the one-time normalizeDB() backfill that ran at boot
+        // (e.g. for a project whose Firestore data predates the Science sub-category subject,
+        // where the "mockTests" document has no "science" key at all). Without this, the very
+        // first snapshot fired by this listener silently wipes out the backfilled Science tests
+        // in memory, which is what made the Admin Mock Manager's Science tab intermittently show
+        // "No tests in this subject yet". Re-apply the same backfill here and persist it once so
+        // a remote sync can never re-break the Science tab again.
+        if(key==='mockTests' && (!DB.mockTests.science || !DB.mockTests.science.length)){
+          DB.mockTests.science = seedDB().mockTests.science;
+          writeKeyValue('mockTests', DB.mockTests).catch(()=>{});
+        }
         if(changed) handleRemoteDbChange();
       }catch(e){ console.warn('Live sync reassembly failed for '+key, e); }
     }, err=> console.warn('Live sync listener error for '+key+':', err));
@@ -1561,7 +1573,27 @@ function markForReview(){
 }
 function saveAndNext(){
   const st = examState; if(st.status[st.current]==='not-visited') st.status[st.current] = st.answers[st.current]?'answered':'not-answered';
+  // On the very last question there's no "next" question to advance to — instead of silently
+  // doing nothing, prompt the student to submit, same as clicking "Submit Test" would.
+  if(st.current === st.questions.length-1){
+    renderPalette(); saveExamProgress();
+    confirmLastQuestionSubmit();
+    return;
+  }
   goToQuestion(Math.min(st.current+1, st.questions.length-1)); saveExamProgress();
+}
+function confirmLastQuestionSubmit(){
+  document.getElementById('examWarnRoot').innerHTML = `
+    <div class="fixed inset-0 z-[60] modal-backdrop flex items-center justify-center p-4">
+      <div class="card glow-border rounded-2xl p-6 max-w-sm text-center">
+        <h3 class="font-display font-700 text-lg mb-5">Do you want to submit?</h3>
+        <div class="flex gap-2">
+          <button onclick="document.getElementById('examWarnRoot').innerHTML=''" class="flex-1 btn-ghost rounded-lg py-2.5 text-xs font-bold">No</button>
+          <button onclick="finishExam(false)" class="flex-1 rounded-lg py-2.5 text-xs font-bold bg-red-600 text-white">Yes</button>
+        </div>
+      </div>
+    </div>`;
+  lucide.createIcons();
 }
 function examNav(delta){ goToQuestion(Math.max(0, Math.min(examState.current+delta, examState.questions.length-1))); }
 function goToQuestion(idx){
