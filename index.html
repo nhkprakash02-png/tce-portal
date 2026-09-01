@@ -295,7 +295,7 @@ function timeAgo(iso){
 function purgeExpiredPendingSignups(){
   const cutoff = Date.now() - 24*60*60*1000;
   const before = DB.students.length;
-  DB.students = DB.students.filter(s=> !(s.registeredAt && s.paymentStatus==='Not Enrolled' && new Date(s.registeredAt).getTime() < cutoff));
+  DB.students = DB.students.filter(s=> !(s.pendingReview && s.registeredAt && new Date(s.registeredAt).getTime() < cutoff));
   if(DB.students.length !== before) saveDB();
 }
 
@@ -447,6 +447,9 @@ function normalizeDB(db){
   Object.keys(db.materials||{}).forEach(cat=>{
     (db.materials[cat]||[]).forEach(m=>{ if(m.isFreeDemo===undefined) m.isFreeDemo = false; });
   });
+  // Pending Approvals: any student saved before this field existed is treated as already
+  // reviewed (so existing records don't suddenly vanish from the main Students list).
+  (db.students||[]).forEach(s=>{ if(s.pendingReview===undefined) s.pendingReview = false; });
   // "Science" is a brand-new subject: any database that existed before it was introduced only
   // gets an empty array from a naive backfill, which makes the admin panel and public Mock
   // Tests > Science tab look broken ("No tests in this subject yet"). Backfill with the same
@@ -753,7 +756,7 @@ function setTab(id){
   updateHomeOnlySectionsVisibility();
 }
 function setTabFromHistory(id){
-  activeTab=id; inAnalysisScreen=false; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'});
+  activeTab=id; inAnalysisScreen=false; renderNav(); renderTab(); window.scrollTo(0,0);
   updateBackButtonVisibility();
   updateHomeOnlySectionsVisibility();
 }
@@ -1086,7 +1089,7 @@ function signupUser(){
   if(password.length<6){ showErr('Password must be at least 6 characters.'); return; }
   if(password!==confirm){ showErr('Passwords do not match.'); return; }
   if(DB.students.some(s=> (s.email||'').toLowerCase()===email.toLowerCase())){ showErr('An account with this email already exists. Please login instead.'); return; }
-  const student = {id:uid('st'), name, email, phone, password, address:'', joinDate:new Date().toISOString().slice(0,10), registeredAt:new Date().toISOString(), paymentStatus:'Not Enrolled', batch:'—'};
+  const student = {id:uid('st'), name, email, phone, password, address:'', joinDate:new Date().toISOString().slice(0,10), registeredAt:new Date().toISOString(), paymentStatus:'Not Enrolled', batch:'—', pendingReview:true};
   DB.students.push(student); saveDB();
   setCurrentUser(student); closeModal(); setTab('dashboard');
 }
@@ -1104,7 +1107,7 @@ function googleSignIn(){
 function finalizeLogin(profile){
   let student = DB.students.find(s=> (profile.email && s.email===profile.email) || (profile.phone && s.phone===profile.phone));
   if(!student){
-    student = {id:uid('st'), name:profile.name, phone:profile.phone||'', email:profile.email||'', address:'', joinDate:new Date().toISOString().slice(0,10), registeredAt:new Date().toISOString(), paymentStatus:'Not Enrolled', batch:'—'};
+    student = {id:uid('st'), name:profile.name, phone:profile.phone||'', email:profile.email||'', address:'', joinDate:new Date().toISOString().slice(0,10), registeredAt:new Date().toISOString(), paymentStatus:'Not Enrolled', batch:'—', pendingReview:true};
     DB.students.push(student); saveDB();
   }
   setCurrentUser(student); closeModal(); setTab('dashboard');
@@ -2290,9 +2293,13 @@ function incrementMaterialView(id, cat){
 async function previewMaterial(id, cat){
   const mat = (DB.materials[cat]||[]).find(m=>m.id===id);
   const user = getCurrentUser();
-  if(!user){ alert('Please login to view watermarked materials.'); openLoginModal(); return; }
-  // Access control: non-Free-Demo materials are exclusive to enrolled/paid students.
-  if(mat && !mat.isFreeDemo && !(isEnrolled()||isAdmin())){ openEnrollModal('materialsLocked'); return; }
+  const isFreeDemo = !!(mat && mat.isFreeDemo);
+  // Free Demo materials are open to everyone, including visitors who aren't logged in.
+  // Everything else still requires login, then the enrolled/paid access check.
+  if(!isFreeDemo){
+    if(!user){ alert('Please login to view watermarked materials.'); openLoginModal(); return; }
+    if(mat && !(isEnrolled()||isAdmin())){ openEnrollModal('materialsLocked'); return; }
+  }
   incrementMaterialView(id, cat);
   // A material set via a pasted link (as opposed to an actual uploaded PDF file, which is
   // stored as a "data:" URL) isn't real PDF bytes we can watermark — open the link itself
@@ -2317,9 +2324,13 @@ async function previewMaterial(id, cat){
 async function downloadMaterial(id, cat){
   const mat = (DB.materials[cat]||[]).find(m=>m.id===id);
   const user = getCurrentUser();
-  if(!user){ alert('Please login to download watermarked materials.'); openLoginModal(); return; }
-  // Access control: non-Free-Demo materials are exclusive to enrolled/paid students.
-  if(mat && !mat.isFreeDemo && !(isEnrolled()||isAdmin())){ openEnrollModal('materialsLocked'); return; }
+  const isFreeDemo = !!(mat && mat.isFreeDemo);
+  // Free Demo materials are open to everyone, including visitors who aren't logged in.
+  // Everything else still requires login, then the enrolled/paid access check.
+  if(!isFreeDemo){
+    if(!user){ alert('Please login to download watermarked materials.'); openLoginModal(); return; }
+    if(mat && !(isEnrolled()||isAdmin())){ openEnrollModal('materialsLocked'); return; }
+  }
   // Same reasoning as previewMaterial(): a pasted link has no PDF bytes to watermark, so
   // trigger a direct download of the actual file instead of generating a placeholder PDF.
   if(mat && mat.url && !mat.url.startsWith('data:')){
@@ -2552,7 +2563,7 @@ function renderAdminBody(){
 /* --- Pending Approvals: new self-registered sign-ups awaiting a Grant/Delete decision --- */
 function adminPendingView(){
   purgeExpiredPendingSignups();
-  const pending = DB.students.filter(s=>s.registeredAt && s.paymentStatus==='Not Enrolled').sort((a,b)=> new Date(b.registeredAt)-new Date(a.registeredAt));
+  const pending = DB.students.filter(s=>s.pendingReview).sort((a,b)=> new Date(b.registeredAt)-new Date(a.registeredAt));
   return `
   <p class="text-sm muted mb-4">${pending.length} new sign-up${pending.length===1?'':'s'} awaiting review. Unapproved sign-ups are automatically removed 24 hours after registration if left untouched.</p>
   <div class="overflow-x-auto"><table class="w-full text-xs">
@@ -2561,12 +2572,13 @@ function adminPendingView(){
       ${pending.length? pending.map((s,i)=>`
         <tr style="border-top:1px solid var(--border)">
           <td class="p-2">${i+1}</td><td class="p-2">${s.name}</td><td class="p-2">${s.phone||'-'}</td><td class="p-2">${s.email||'-'}</td><td class="p-2">${timeAgo(s.registeredAt)}</td>
-          <td class="p-2 flex gap-1"><button onclick="grantAccess('${s.id}')" class="px-2 py-1 rounded bg-emerald-600 text-white text-[10px] font-bold">Grant</button><button onclick="deleteStudent('${s.id}')" class="px-2 py-1 rounded bg-gray-600 text-white text-[10px] font-bold flex items-center gap-0.5"><i data-lucide="trash-2" class="w-3 h-3"></i>Delete</button></td>
+          <td class="p-2 flex gap-1"><button onclick="approveSignup('${s.id}')" class="px-2 py-1 rounded bg-emerald-600 text-white text-[10px] font-bold">Grant</button><button onclick="deleteStudent('${s.id}')" class="px-2 py-1 rounded bg-gray-600 text-white text-[10px] font-bold flex items-center gap-0.5"><i data-lucide="trash-2" class="w-3 h-3"></i>Delete</button></td>
         </tr>`).join('') : `<tr><td class="p-2 muted" colspan="6">No pending sign-ups right now.</td></tr>`}
     </tbody>
   </table></div>`;
 }
 function adminStudentsView(){
+  const listed = DB.students.filter(s=>!s.pendingReview);
   return `
   <div class="card2 rounded-xl p-4 mb-4">
     <p class="text-xs font-bold muted uppercase mb-3">Manually Enroll a Student</p>
@@ -2588,13 +2600,13 @@ function adminStudentsView(){
     <p class="text-[11px] muted mt-2">The student becomes eligible for enrolled/paid mock tests the moment they log in with this same email or phone.</p>
   </div>
   <div class="flex justify-between items-center mb-4">
-    <p class="text-sm muted">${DB.students.length} registered students</p>
+    <p class="text-sm muted">${listed.length} registered students</p>
     <button onclick="exportStudentsExcel()" class="btn-gold rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1.5"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>Export to Excel</button>
   </div>
   <div class="overflow-x-auto"><table class="w-full text-xs">
     <thead class="card2"><tr class="text-left muted"><th class="p-2">#</th><th class="p-2">Name</th><th class="p-2">Phone</th><th class="p-2">Email</th><th class="p-2">Address</th><th class="p-2">Joined</th><th class="p-2">Status</th><th class="p-2">Actions</th></tr></thead>
     <tbody>
-      ${DB.students.map((s,i)=>`
+      ${listed.map((s,i)=>`
         <tr style="border-top:1px solid var(--border)">
           <td class="p-2">${i+1}</td><td class="p-2">${s.name}</td><td class="p-2">${s.phone}</td><td class="p-2">${s.email}</td><td class="p-2">${s.address||'-'}</td><td class="p-2">${s.joinDate}</td>
           <td class="p-2"><span class="badge ${s.paymentStatus==='Approved'?'bg-emerald-500/20 text-emerald-400':(s.paymentStatus==='Pending'?'bg-amber-500/20 gold-text':'bg-gray-500/20 muted')}">${s.paymentStatus}</span></td>
@@ -2617,6 +2629,10 @@ function addStudentManually(){
   DB.students.push({id:uid('st'), name, phone, email, address, joinDate:new Date().toISOString().slice(0,10), paymentStatus, batch: paymentStatus==='Approved'? batch : '—'});
   saveDB(); renderAdminBody();
 }
+// Moves a pending sign-up into the main Students list (status stays "Not Enrolled" — this
+// just approves the account itself, not paid access) and clears it out of Pending Approvals.
+// Separate from grantAccess(), which grants actual paid/enrolled status from the Students list.
+function approveSignup(id){ const s=DB.students.find(x=>x.id===id); if(s){ s.pendingReview=false; saveDB(); renderAdminBody(); } }
 function grantAccess(id){ const s=DB.students.find(x=>x.id===id); if(s){ s.paymentStatus='Approved'; if(s.batch==='—')s.batch='WBP Special'; saveDB(); renderAdminBody(); } }
 function blockStudent(id){ const s=DB.students.find(x=>x.id===id); if(s){ s.paymentStatus='Blocked'; saveDB(); renderAdminBody(); } }
 function deleteStudent(id){
@@ -3271,9 +3287,8 @@ function init(){
   updateBackButtonVisibility();
   lucide.createIcons();
 }
-// Render instantly with local defaults, then silently swap in the live Firestore
-// data (and start real-time sync) in the background once it arrives — no loading screen.
-init();
+// Wait for the real database to finish loading before rendering anything at all, so no
+// hardcoded demo/seed content is ever shown — even momentarily — on page load or refresh.
 async function boot(){
   try{
     DB = await loadDB();
@@ -3288,10 +3303,7 @@ async function boot(){
     batchesDataReady = true; // nothing more is coming — show whatever we have rather than loading forever
   }
   purgeExpiredPendingSignups();
-  renderNav(); renderHero(); startHeroAuto(); renderTicker(); renderMentors();
-  if(isAdminPanelOpen()) renderAdminBody();
-  else if(!document.getElementById('modalRoot').innerHTML.trim()) renderTab();
-  lucide.createIcons();
+  init();
 }
 boot();
 </script>
