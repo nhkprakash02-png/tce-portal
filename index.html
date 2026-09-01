@@ -1255,15 +1255,15 @@ function tplMocks(){
     </div>
     <span class="badge bg-red-500/15 text-red-400 w-fit">🔒 Paid / Enrolled Students Only (except Free Demo)</span>
   </div>
-  <div class="flex flex-col sm:flex-row gap-3 mb-3">
-    <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 flex-1">
+  <div class="flex flex-col md:flex-row md:flex-wrap gap-3 mb-3">
+    <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 flex-1 min-w-0">
       ${subjects.map(s=>`<button onclick="mockSubjectTab='${s[0]}';mockSubCategory='all';renderTab()" id="mst_${s[0]}" class="px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap ${mockSubjectTab===s[0]?'tab-active':'card2 muted'}">${s[1]}</button>`).join('')}
     </div>
-    <select id="mockExamFilterSel" onchange="mockExamFilter=this.value;initMocksTab()" class="rounded-lg px-3 py-2 text-xs">
+    <select id="mockExamFilterSel" onchange="mockExamFilter=this.value;initMocksTab()" class="rounded-lg px-3 py-2 text-xs w-full md:w-auto md:shrink-0">
       <option value="all">All Exam Categories</option>
       ${DB.examCategories.map(c=>`<option value="${c}">${c}</option>`).join('')}
     </select>
-    <div class="relative w-full sm:w-64">
+    <div class="relative w-full md:w-64 md:shrink-0">
       <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 muted"></i>
       <input type="text" placeholder="Search test title..." oninput="mockSearchQ=this.value;initMocksTab()" class="w-full rounded-lg pl-9 pr-3 py-2 text-xs">
     </div>
