@@ -1292,10 +1292,14 @@ function initMocksTab(){
   if(mockSearchQ.trim()) tests = tests.filter(t=>t.title.toLowerCase().includes(mockSearchQ.trim().toLowerCase()));
   if(mockExamFilter!=='all') tests = tests.filter(t=>(t.examCategory||'All Exams')===mockExamFilter || (t.examCategory||'All Exams')==='All Exams');
   if(mockSubCategory!=='all') tests = tests.filter(t=>t.subCategory===mockSubCategory);
-  const enrolled = isEnrolled() || isAdmin();
+  // Enrollment alone no longer grants blanket access to every paid Mock Test — the admin
+  // now curates which paid tests are actually available, per test, via the "Unlock for
+  // Enrolled Students" control in the Mock Manager. isAdmin() still always sees everything.
+  const enrolled = isEnrolled();
+  const adminViewing = isAdmin();
   const user = getCurrentUser();
   list.innerHTML = tests.length ? tests.map((t)=>{
-    const locked = !t.isDemo && !enrolled && !t.adminUnlocked;
+    const locked = !t.isDemo && !adminViewing && !(enrolled && t.adminUnlocked);
     const attempts = DB.submissions.filter(s=>s.testId===t.id && user && s.studentId===user.id).length;
     return `
     <div class="card glow-border rounded-2xl p-5 flex flex-col">
@@ -1303,7 +1307,7 @@ function initMocksTab(){
         <span class="badge ${t.isDemo?'bg-emerald-500/20 text-emerald-400':'bg-amber-500/15 gold-text'}">${t.isDemo?'FREE DEMO':'PREMIUM'}</span>
         ${t.subCategory ? `<span class="badge bg-purple-500/15 text-purple-400">${t.subCategory}</span>` : ''}
         ${t.examCategory && t.examCategory!=='All Exams' ? `<span class="badge bg-sky-500/15 text-sky-400">${t.examCategory}</span>` : ''}
-        ${(t.adminUnlocked && !t.isDemo) ? '<span class="badge bg-sky-500/20 text-sky-400">🔓 Unlocked by Admin</span>' : ''}
+        ${(t.adminUnlocked && !t.isDemo && !locked) ? '<span class="badge bg-sky-500/20 text-sky-400">🔓 Unlocked for Enrolled Students</span>' : ''}
         ${locked?'<span class="badge bg-red-500/15 text-red-400">🔒 Locked</span>':''}
       </div>
       <h3 class="font-display font-700 text-sm mb-1">${t.title}</h3>
@@ -2700,11 +2704,11 @@ function adminQuestionsView(){
     <span class="text-[11px] muted">— set per test below via "+ New Test" or "Edit Test Info"</span>
   </div>` : ''}
   <div class="flex flex-wrap gap-2 mb-4 items-center">
-    <select onchange="qbTestId=this.value;renderAdminBody()" class="rounded-lg px-3 py-2 text-xs">${tests.map(t=>`<option value="${t.id}" ${t.id===qbTestId?'selected':''}>${t.title}${t.subCategory?' — '+t.subCategory:''} ${t.isDemo?'(Free Demo)':''}${(t.adminUnlocked&&!t.isDemo)?'(Unlocked)':''}</option>`).join('')}</select>
+    <select onchange="qbTestId=this.value;renderAdminBody()" class="rounded-lg px-3 py-2 text-xs">${tests.map(t=>`<option value="${t.id}" ${t.id===qbTestId?'selected':''}>${t.title}${t.subCategory?' — '+t.subCategory:''} ${t.isDemo?'(Free Demo)':''}${(t.adminUnlocked&&!t.isDemo)?'(Unlocked for Enrolled)':''}</option>`).join('')}</select>
     <button onclick="addNewMockTest()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">+ New Test</button>
     ${test?`
     <button onclick="toggleDemoFlag()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">${test.isDemo?'Mark as Premium':'Mark as Free Demo'}</button>
-    <button onclick="toggleAdminUnlock()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">${test.adminUnlocked?'Lock for Non-Enrolled':'Unlock for Everyone'}</button>
+    <button onclick="toggleAdminUnlock()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">${test.adminUnlocked?'Lock This Test':'Unlock for Enrolled Students'}</button>
     <button onclick="editTestMeta()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">Edit Test Info</button>
     <button onclick="printOfflinePaper('mock')" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1"><i data-lucide="printer" class="w-3.5 h-3.5"></i>Print / Export Offline Paper</button>
     <button onclick="deleteTest('mock')" class="rounded-lg px-3 py-2 text-xs font-bold bg-red-600 text-white flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete Test</button>`:''}
@@ -2768,8 +2772,10 @@ function addNewMockTest(){
   DB.mockTests[qbSubject].push(nt); qbTestId=nt.id; saveDB(); renderAdminBody();
 }
 function toggleDemoFlag(){ const test = currentTestRef('mock'); if(test){ test.isDemo=!test.isDemo; saveDB(); renderAdminBody(); } }
-// Independent of the Free Demo flag: lets the admin manually open up (or re-restrict) a
-// specific paid/enrolled-only test for everyone, at any time, without changing its Demo status.
+// Independent of the Free Demo flag: lets the admin manually curate which paid/enrolled-only
+// tests are actually available to enrolled students at any given time (enrollment alone no
+// longer grants blanket access — see initMocksTab). Non-enrolled users are never affected by
+// this flag; they can only ever access Free Demo tests.
 function toggleAdminUnlock(){ const test = currentTestRef('mock'); if(test){ test.adminUnlocked=!test.adminUnlocked; saveDB(); renderAdminBody(); } }
 function editTestMeta(){
   const test = currentTestRef('mock'); if(!test) return;
