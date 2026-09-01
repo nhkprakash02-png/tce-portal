@@ -277,6 +277,25 @@ const ADM_KEY = 'tce_admin_session_v1';
 function uid(prefix){ return prefix+'_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
 function priceLabel(p){ return '₹'+p+' / Month'; }
 function defaultBatchFeatures(){ return ['Full access to all Mocks','PYQ Hub with multi-attempt analysis','Daily Quizzes','Detailed Analysis','Unlimited Re-attempts']; }
+function timeAgo(iso){
+  if(!iso) return '';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const hrs = diffMs/3600000;
+  if(hrs<1) return Math.max(1,Math.round(diffMs/60000))+'m ago';
+  if(hrs<24) return Math.round(hrs)+'h ago';
+  return Math.round(hrs/24)+'d ago';
+}
+// New self-registered sign-ups that are never approved within 24 hours are automatically
+// removed from the Pending Approvals queue (and the student list) entirely. This only ever
+// targets fresh, untouched registrations (paymentStatus still 'Not Enrolled') — students who
+// submitted a payment reference (paymentStatus 'Pending') or were manually added by the admin
+// are never affected by this cleanup.
+function purgeExpiredPendingSignups(){
+  const cutoff = Date.now() - 24*60*60*1000;
+  const before = DB.students.length;
+  DB.students = DB.students.filter(s=> !(s.registeredAt && s.paymentStatus==='Not Enrolled' && new Date(s.registeredAt).getTime() < cutoff));
+  if(DB.students.length !== before) saveDB();
+}
 
 // Mock Tests sub-category bifurcation (Mock Tests only — not used by PYQ, Quiz, or Study Materials).
 const SUBCATEGORIES = {
@@ -420,7 +439,13 @@ function normalizeDB(db){
   Object.keys(db.mockTests||{}).forEach(sub=>{
     (db.mockTests[sub]||[]).forEach(t=>{ if(!t.examCategory) t.examCategory = "All Exams"; });
   });
-  if(db.mockTests && !db.mockTests.science) db.mockTests.science = []; // "Science" subject introduced later
+  // "Science" is a brand-new subject: any database that existed before it was introduced only
+  // gets an empty array from a naive backfill, which makes the admin panel and public Mock
+  // Tests > Science tab look broken ("No tests in this subject yet"). Backfill with the same
+  // real demo tests (with Physics/Chemistry/Biology sub-categories) a fresh install would get.
+  if(db.mockTests && (!db.mockTests.science || !db.mockTests.science.length)){
+    db.mockTests.science = seedDB().mockTests.science;
+  }
   if(!db.quizDurations) db.quizDurations = {"5":3, "10":7, "15":10, "20":12};
   (db.batches||[]).forEach(b=>{
     if(!b.examCategory) b.examCategory = "All Exams"; b.price = 300; // pricing standardized portal-wide at ₹300 / Month
@@ -638,6 +663,10 @@ function pushOrReplaceModalState(extra){
   if(modalHistoryDepth===0){ history.pushState(state, '', location.hash||('#'+activeTab)); modalHistoryDepth = 1; }
   else{ history.replaceState(state, '', location.hash||('#'+activeTab)); }
 }
+// The floating back button is intentionally hidden specifically on the Mock/PYQ/Quiz Analysis
+// and Review-Solutions screens (users rely on phone/browser navigation there instead) — every
+// other page keeps the floating back button exactly as before.
+let inAnalysisScreen = false;
 
 function renderNav(){
   const user = getCurrentUser();
@@ -672,13 +701,13 @@ function updateHomeOnlySectionsVisibility(){
   if(mentors) mentors.classList.toggle('hidden', !isHome);
 }
 function setTab(id){
-  activeTab=id; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'});
+  activeTab=id; inAnalysisScreen=false; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'});
   history.pushState({tab:id}, '', '#'+id);
   updateBackButtonVisibility();
   updateHomeOnlySectionsVisibility();
 }
 function setTabFromHistory(id){
-  activeTab=id; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'});
+  activeTab=id; inAnalysisScreen=false; renderNav(); renderTab(); window.scrollTo({top:0,behavior:'smooth'});
   updateBackButtonVisibility();
   updateHomeOnlySectionsVisibility();
 }
@@ -840,12 +869,14 @@ function renderMentors(){
 ========================================================================= */
 function openModal(html){
   document.getElementById('modalRoot').innerHTML = `<div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-3" onclick="if(event.target===this)closeModal()"><div class="w-full max-w-lg fade-in">${html}</div></div>`;
+  inAnalysisScreen = false;
   pushOrReplaceModalState();
   updateBackButtonVisibility();
   lucide.createIcons();
 }
 function openModalWide(html){
   document.getElementById('modalRoot').innerHTML = `<div class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-3" onclick="if(event.target===this)closeModal()"><div class="w-full max-w-4xl fade-in max-h-[92vh] overflow-y-auto rounded-2xl">${html}</div></div>`;
+  inAnalysisScreen = false;
   pushOrReplaceModalState();
   updateBackButtonVisibility();
   lucide.createIcons();
@@ -853,6 +884,7 @@ function openModalWide(html){
 function closeModal(){
   document.getElementById('modalRoot').innerHTML='';
   modalHistoryDepth = 0;
+  inAnalysisScreen = false;
   updateBackButtonVisibility();
   // Whatever was open (admin panel, enrollment, banner/material upload, etc.) may have
   // changed data — refresh the page underneath so changes appear immediately instead
@@ -868,8 +900,9 @@ function closeModal(){
 function updateBackButtonVisibility(){
   const modalOpen = document.getElementById('modalRoot').innerHTML.trim().length>0;
   // The floating back button is removed entirely while an active test/quiz is in progress
-  // (device/browser back is intercepted separately below); it stays available everywhere else.
-  const show = !examState && (modalOpen || activeTab!=='home');
+  // (device/browser back is intercepted separately below), and on the Mock/PYQ/Quiz Analysis
+  // and Review-Solutions screens specifically; it stays available on every other page.
+  const show = !examState && !inAnalysisScreen && (modalOpen || activeTab!=='home');
   const btn = document.getElementById('globalBackBtn');
   if(btn){
     if(show){ btn.classList.remove('hidden'); btn.classList.add('flex'); }
@@ -911,6 +944,7 @@ window.addEventListener('popstate', (e)=>{
   // Any screen we navigated "into" (a tab, a modal, an exam, admin panel, etc.) gets undone by one browser-back step.
   document.getElementById('modalRoot').innerHTML='';
   modalHistoryDepth = 0;
+  inAnalysisScreen = false;
   const st = e.state;
   const tab = (st && st.tab) ? st.tab : 'home';
   setTabFromHistory(tab);
@@ -1006,7 +1040,7 @@ function signupUser(){
   if(password.length<6){ showErr('Password must be at least 6 characters.'); return; }
   if(password!==confirm){ showErr('Passwords do not match.'); return; }
   if(DB.students.some(s=> (s.email||'').toLowerCase()===email.toLowerCase())){ showErr('An account with this email already exists. Please login instead.'); return; }
-  const student = {id:uid('st'), name, email, phone, password, address:'', joinDate:new Date().toISOString().slice(0,10), paymentStatus:'Not Enrolled', batch:'—'};
+  const student = {id:uid('st'), name, email, phone, password, address:'', joinDate:new Date().toISOString().slice(0,10), registeredAt:new Date().toISOString(), paymentStatus:'Not Enrolled', batch:'—'};
   DB.students.push(student); saveDB();
   setCurrentUser(student); closeModal(); setTab('dashboard');
 }
@@ -1024,7 +1058,7 @@ function googleSignIn(){
 function finalizeLogin(profile){
   let student = DB.students.find(s=> (profile.email && s.email===profile.email) || (profile.phone && s.phone===profile.phone));
   if(!student){
-    student = {id:uid('st'), name:profile.name, phone:profile.phone||'', email:profile.email||'', address:'', joinDate:new Date().toISOString().slice(0,10), paymentStatus:'Not Enrolled', batch:'—'};
+    student = {id:uid('st'), name:profile.name, phone:profile.phone||'', email:profile.email||'', address:'', joinDate:new Date().toISOString().slice(0,10), registeredAt:new Date().toISOString(), paymentStatus:'Not Enrolled', batch:'—'};
     DB.students.push(student); saveDB();
   }
   setCurrentUser(student); closeModal(); setTab('dashboard');
@@ -1411,6 +1445,7 @@ function startMockTest(testId, subject){ showPreExamInstructions(testId,'mock',s
 function renderExamScreen(){
   const st = examState;
   const hasBn = st.questions.some(qq=>qq.textBn && qq.textBn.trim().length>0);
+  inAnalysisScreen = false;
   pushOrReplaceModalState({exam:true});
   updateBackButtonVisibility();
   document.getElementById('modalRoot').innerHTML = `
@@ -1639,6 +1674,7 @@ function sectionDisplayName(subject){
   return map[subject] || (subject? subject.charAt(0).toUpperCase()+subject.slice(1) : 'Section');
 }
 function renderResultScreen(sub, autoTimeout, autoViolation){
+  inAnalysisScreen = true;
   const leaderboard = DB.submissions.filter(s=>s.testId===sub.testId)
     .reduce((acc,s)=>{ const ex=acc.find(a=>a.studentId===s.studentId); if(!ex||s.score>ex.score){ acc=acc.filter(a=>a.studentId!==s.studentId); acc.push(s); } return acc; },[])
     .sort((a,b)=>b.score-a.score);
@@ -1765,6 +1801,7 @@ function reviewSolutions(subId){
 }
 function renderReviewScreen(){
   const sub = currentReviewSub(); if(!sub) return;
+  inAnalysisScreen = true;
   pushOrReplaceModalState({exam:true});
   updateBackButtonVisibility();
   const correctCount = sub.detail.filter(d=>d.given && d.given===d.q.correct).length;
@@ -2370,7 +2407,7 @@ function openAdminPanel(){
         <div class="flex gap-2"><button onclick="adminLogout()" class="btn-ghost rounded-md px-3 py-1.5 text-xs font-bold">Logout</button><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
       </div>
       <div class="flex gap-1 px-5 pt-3 overflow-x-auto hide-scrollbar">
-        ${[['students','Students'],['results','Mock Results'],['questions','Mock/PYQ Manager'],['pyq','PYQ Uploader'],['gkquiz','GK Quiz Uploader'],['materials','Materials'],['batches','Batches'],['banners','Banner Slider'],['content','Notices'],['settings','Settings']].map(t=>`
+        ${[['pending','Pending Approvals'],['students','Students'],['results','Mock Results'],['questions','Mock/PYQ Manager'],['pyq','PYQ Uploader'],['gkquiz','GK Quiz Uploader'],['materials','Materials'],['batches','Batches'],['banners','Banner Slider'],['content','Notices'],['settings','Settings']].map(t=>`
           <button onclick="adminTab='${t[0]}';renderAdminBody()" id="adt_${t[0]}" class="px-3 py-2 rounded-t-lg text-xs font-bold whitespace-nowrap ${adminTab===t[0]?'tab-active':'muted'}">${t[1]}</button>`).join('')}
       </div>
       <div id="adminBody" class="p-5 max-h-[65vh] overflow-y-auto"></div>
@@ -2381,7 +2418,8 @@ function renderAdminBody(){
   document.querySelectorAll('[id^="adt_"]').forEach(b=>b.classList.remove('tab-active'));
   const a = document.getElementById('adt_'+adminTab); if(a) a.classList.add('tab-active');
   const body = document.getElementById('adminBody');
-  if(adminTab==='students') body.innerHTML = adminStudentsView();
+  if(adminTab==='pending') body.innerHTML = adminPendingView();
+  else if(adminTab==='students') body.innerHTML = adminStudentsView();
   else if(adminTab==='results') body.innerHTML = adminResultsView();
   else if(adminTab==='questions') body.innerHTML = adminQuestionsView();
   else if(adminTab==='pyq') body.innerHTML = adminPyqView();
@@ -2396,6 +2434,23 @@ function renderAdminBody(){
 }
 
 /* --- Students --- */
+/* --- Pending Approvals: new self-registered sign-ups awaiting a Grant/Delete decision --- */
+function adminPendingView(){
+  purgeExpiredPendingSignups();
+  const pending = DB.students.filter(s=>s.registeredAt && s.paymentStatus==='Not Enrolled').sort((a,b)=> new Date(b.registeredAt)-new Date(a.registeredAt));
+  return `
+  <p class="text-sm muted mb-4">${pending.length} new sign-up${pending.length===1?'':'s'} awaiting review. Unapproved sign-ups are automatically removed 24 hours after registration if left untouched.</p>
+  <div class="overflow-x-auto"><table class="w-full text-xs">
+    <thead class="card2"><tr class="text-left muted"><th class="p-2">#</th><th class="p-2">Name</th><th class="p-2">Phone</th><th class="p-2">Email</th><th class="p-2">Registered</th><th class="p-2">Actions</th></tr></thead>
+    <tbody>
+      ${pending.length? pending.map((s,i)=>`
+        <tr style="border-top:1px solid var(--border)">
+          <td class="p-2">${i+1}</td><td class="p-2">${s.name}</td><td class="p-2">${s.phone||'-'}</td><td class="p-2">${s.email||'-'}</td><td class="p-2">${timeAgo(s.registeredAt)}</td>
+          <td class="p-2 flex gap-1"><button onclick="grantAccess('${s.id}')" class="px-2 py-1 rounded bg-emerald-600 text-white text-[10px] font-bold">Grant</button><button onclick="deleteStudent('${s.id}')" class="px-2 py-1 rounded bg-gray-600 text-white text-[10px] font-bold flex items-center gap-0.5"><i data-lucide="trash-2" class="w-3 h-3"></i>Delete</button></td>
+        </tr>`).join('') : `<tr><td class="p-2 muted" colspan="6">No pending sign-ups right now.</td></tr>`}
+    </tbody>
+  </table></div>`;
+}
 function adminStudentsView(){
   return `
   <div class="card2 rounded-xl p-4 mb-4">
@@ -3076,6 +3131,7 @@ async function boot(){
     BANNERS = (DB.banners||[]).map(b=>({id:uid('bn'), title:b.title, subtitle:b.subtitle, image:'', link:'', grad:b.grad||'from-amber-600 via-yellow-500 to-orange-600', tag:b.tag||''}));
     batchesDataReady = true; // nothing more is coming — show whatever we have rather than loading forever
   }
+  purgeExpiredPendingSignups();
   renderNav(); renderHero(); startHeroAuto(); renderTicker(); renderMentors();
   if(isAdminPanelOpen()) renderAdminBody();
   else if(!document.getElementById('modalRoot').innerHTML.trim()) renderTab();
