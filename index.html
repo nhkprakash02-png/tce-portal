@@ -364,7 +364,7 @@ function seedDB(){
   const mockTests = {};
   subjects.forEach(sub=>{
     mockTests[sub] = [1,2,3].map(n=>({
-      id: uid('mt'), subject: sub, title: `${subjectLabel[sub]} Mock Test ${n}`, isDemo: n===1, examCategory:"All Exams",
+      id: uid('mt'), subject: sub, title: `${subjectLabel[sub]} Mock Test ${n}`, isDemo: n===1, adminUnlocked: false, examCategory:"All Exams",
       durationMin: sub==='full' ? 60 : 20, marksCorrect: 2, marksWrong: 0.5,
       subCategory: SUBCATEGORIES[sub] ? SUBCATEGORIES[sub][(n-1) % SUBCATEGORIES[sub].length] : undefined,
       questions: sampleQ(sub, sub==='full'?10:8)
@@ -404,12 +404,12 @@ function seedDB(){
     quizDurations: {"5":3, "10":7, "15":10, "20":12},
     submissions: [],
     materials: {
-      math:[{id:uid('mat'), title:"Math Formula Booklet (Demo)", url:"", views:0}],
-      english:[{id:uid('mat'), title:"English Grammar Notes (Demo)", url:"", views:0}],
-      reasoning:[{id:uid('mat'), title:"Reasoning Shortcuts (Demo)", url:"", views:0}],
-      gk:[{id:uid('mat'), title:"GK Capsule 2026 (Demo)", url:"", views:0}],
-      science:[{id:uid('mat'), title:"Science Notes (Demo)", url:"", views:0}],
-      currentAffairs:[{id:uid('mat'), title:"Current Affairs — August 2026 (Demo)", url:"", views:0}]
+      math:[{id:uid('mat'), title:"Math Formula Booklet (Demo)", url:"", isFreeDemo:true, views:0}],
+      english:[{id:uid('mat'), title:"English Grammar Notes (Demo)", url:"", isFreeDemo:true, views:0}],
+      reasoning:[{id:uid('mat'), title:"Reasoning Shortcuts (Demo)", url:"", isFreeDemo:true, views:0}],
+      gk:[{id:uid('mat'), title:"GK Capsule 2026 (Demo)", url:"", isFreeDemo:true, views:0}],
+      science:[{id:uid('mat'), title:"Science Notes (Demo)", url:"", isFreeDemo:true, views:0}],
+      currentAffairs:[{id:uid('mat'), title:"Current Affairs — August 2026 (Demo)", url:"", isFreeDemo:true, views:0}]
     },
     notices: [
       {id:uid('nt'), title:"WBP Constable Recruitment 2026 Notification Out", date:"2026-08-20", body:"West Bengal Police has released the recruitment notification. Check eligibility and apply before the deadline."},
@@ -440,7 +440,12 @@ function seedDB(){
 function normalizeDB(db){
   // Backfill fields introduced in later versions so older saved data doesn't break the UI.
   Object.keys(db.mockTests||{}).forEach(sub=>{
-    (db.mockTests[sub]||[]).forEach(t=>{ if(!t.examCategory) t.examCategory = "All Exams"; });
+    (db.mockTests[sub]||[]).forEach(t=>{ if(!t.examCategory) t.examCategory = "All Exams"; if(t.adminUnlocked===undefined) t.adminUnlocked = false; });
+  });
+  // Study Materials access control: any material saved before this field existed defaults to
+  // "regular" (enrolled/paid-only) — admins mark specific materials as Free Demo explicitly.
+  Object.keys(db.materials||{}).forEach(cat=>{
+    (db.materials[cat]||[]).forEach(m=>{ if(m.isFreeDemo===undefined) m.isFreeDemo = false; });
   });
   // "Science" is a brand-new subject: any database that existed before it was introduced only
   // gets an empty array from a naive backfill, which makes the admin panel and public Mock
@@ -1121,8 +1126,8 @@ function openEnrollModal(context, batchId){
   const mobile = isMobileDevice();
   openModal(`
     <div class="card glow-border rounded-2xl p-6">
-      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">${context==='locked' ? 'Enroll in Batch to Unlock This Mock Test' : 'Enroll Now — '+priceLabel(amount)}</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
-      <p class="text-sm muted mb-4">${context==='locked' ? 'This Mock Test is part of our paid Mock Test series and is strictly restricted to enrolled/paid batch students. Enroll in a batch below to instantly unlock it — PYQs, Daily Quizzes and Study Materials remain 100% free regardless.' : `Unlock full access to ${batchName} for ${priceLabel(amount)}.`}</p>
+      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">${context==='locked' ? 'Enroll in Batch to Unlock This Mock Test' : (context==='materialsLocked' ? 'Enroll in Batch to Unlock This Material' : 'Enroll Now — '+priceLabel(amount))}</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <p class="text-sm muted mb-4">${context==='locked' ? 'This Mock Test is part of our paid Mock Test series and is strictly restricted to enrolled/paid batch students. Enroll in a batch below to instantly unlock it — PYQs and Daily Quizzes remain 100% free regardless.' : (context==='materialsLocked' ? 'This Study Material is part of our paid material library and is restricted to enrolled/paid batch students. Enroll in a batch below to instantly unlock it — PYQs, Daily Quizzes and Free Demo materials remain 100% free regardless.' : `Unlock full access to ${batchName} for ${priceLabel(amount)}.`)}</p>
       ${mobile ? `
       <button onclick="window.location.href='${upiUri}'" class="w-full mb-4 flex items-center justify-center gap-2 btn-gold rounded-lg py-3 text-sm font-bold">
         <i data-lucide="smartphone" class="w-4 h-4"></i> Pay ${priceLabel(amount)} via GPay / PhonePe / Paytm
@@ -1290,7 +1295,7 @@ function initMocksTab(){
   const enrolled = isEnrolled() || isAdmin();
   const user = getCurrentUser();
   list.innerHTML = tests.length ? tests.map((t)=>{
-    const locked = !t.isDemo && !enrolled;
+    const locked = !t.isDemo && !enrolled && !t.adminUnlocked;
     const attempts = DB.submissions.filter(s=>s.testId===t.id && user && s.studentId===user.id).length;
     return `
     <div class="card glow-border rounded-2xl p-5 flex flex-col">
@@ -1298,6 +1303,7 @@ function initMocksTab(){
         <span class="badge ${t.isDemo?'bg-emerald-500/20 text-emerald-400':'bg-amber-500/15 gold-text'}">${t.isDemo?'FREE DEMO':'PREMIUM'}</span>
         ${t.subCategory ? `<span class="badge bg-purple-500/15 text-purple-400">${t.subCategory}</span>` : ''}
         ${t.examCategory && t.examCategory!=='All Exams' ? `<span class="badge bg-sky-500/15 text-sky-400">${t.examCategory}</span>` : ''}
+        ${(t.adminUnlocked && !t.isDemo) ? '<span class="badge bg-sky-500/20 text-sky-400">🔓 Unlocked by Admin</span>' : ''}
         ${locked?'<span class="badge bg-red-500/15 text-red-400">🔒 Locked</span>':''}
       </div>
       <h3 class="font-display font-700 text-sm mb-1">${t.title}</h3>
@@ -2185,7 +2191,7 @@ function tplMaterials(){
       <h2 class="font-display font-800 text-2xl mb-1">Study <span class="gold-text">Materials</span></h2>
       <p class="muted text-sm">All PDFs are watermarked and licensed to your name automatically to prevent piracy.</p>
     </div>
-    <span class="badge bg-emerald-500/20 text-emerald-400 w-fit">✅ 100% FREE — View &amp; Download for Everyone</span>
+    <span class="badge bg-red-500/15 text-red-400 w-fit">🔒 Paid / Enrolled Students Only (except Free Demo)</span>
   </div>
   <div class="flex gap-2 mb-3 flex-wrap">
     ${cats.map(c=>`<button onclick="materialCat='${c[0]}';materialSubCat='all';renderTab()" id="mc_${c[0]}" class="px-4 py-2 rounded-lg text-xs font-bold ${materialCat===c[0]?'tab-active':'card2 muted'}">${c[1]}</button>`).join('')}
@@ -2205,17 +2211,26 @@ function initMaterialsTab(){
   const list = document.getElementById('materialsList');
   let mats = DB.materials[materialCat]||[];
   if(materialSubCat!=='all') mats = mats.filter(m=>m.subCategory===materialSubCat);
-  list.innerHTML = mats.length? mats.map(m=>`
+  list.innerHTML = mats.length? mats.map(m=>{
+    const locked = !m.isFreeDemo && !(isEnrolled()||isAdmin());
+    return `
     <div class="card glow-border rounded-2xl p-5">
       <i data-lucide="file-text" class="w-8 h-8 gold-text mb-3"></i>
       <h3 class="font-display font-700 text-sm mb-1">${m.title}</h3>
-      ${m.subCategory ? `<span class="badge bg-purple-500/15 text-purple-400 mb-2 inline-block">${m.subCategory}</span>` : ''}
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        ${m.subCategory ? `<span class="badge bg-purple-500/15 text-purple-400 inline-block">${m.subCategory}</span>` : ''}
+        <span class="badge ${m.isFreeDemo?'bg-emerald-500/20 text-emerald-400':'bg-amber-500/15 gold-text'} inline-block">${m.isFreeDemo?'FREE DEMO':'PREMIUM'}</span>
+        ${locked?'<span class="badge bg-red-500/15 text-red-400 inline-block">🔒 Locked</span>':''}
+      </div>
       <p class="text-[10px] muted mb-3 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i>${m.views||0} views</p>
+      ${locked ? `
+      <button onclick="openEnrollModal('materialsLocked')" class="w-full btn-ghost rounded-lg py-2 text-xs font-bold flex items-center justify-center gap-1.5"><i data-lucide="lock" class="w-3.5 h-3.5"></i>Enroll in Batch to Unlock</button>` : `
       <div class="flex gap-2">
         <button onclick="previewMaterial('${m.id}','${materialCat}')" class="flex-1 btn-ghost rounded-lg py-2 text-xs font-bold">Preview</button>
         <button onclick="downloadMaterial('${m.id}','${materialCat}')" class="flex-1 btn-gold rounded-lg py-2 text-xs font-bold">Download</button>
-      </div>
-    </div>`).join('') : '<p class="muted text-sm col-span-full">No materials uploaded yet in this category.</p>';
+      </div>`}
+    </div>`;
+  }).join('') : '<p class="muted text-sm col-span-full">No materials uploaded yet in this category.</p>';
   lucide.createIcons();
 }
 async function loadPdfBytesFromMaterial(mat){
@@ -2272,6 +2287,8 @@ async function previewMaterial(id, cat){
   const mat = (DB.materials[cat]||[]).find(m=>m.id===id);
   const user = getCurrentUser();
   if(!user){ alert('Please login to view watermarked materials.'); openLoginModal(); return; }
+  // Access control: non-Free-Demo materials are exclusive to enrolled/paid students.
+  if(mat && !mat.isFreeDemo && !(isEnrolled()||isAdmin())){ openEnrollModal('materialsLocked'); return; }
   incrementMaterialView(id, cat);
   // A material set via a pasted link (as opposed to an actual uploaded PDF file, which is
   // stored as a "data:" URL) isn't real PDF bytes we can watermark — open the link itself
@@ -2297,6 +2314,8 @@ async function downloadMaterial(id, cat){
   const mat = (DB.materials[cat]||[]).find(m=>m.id===id);
   const user = getCurrentUser();
   if(!user){ alert('Please login to download watermarked materials.'); openLoginModal(); return; }
+  // Access control: non-Free-Demo materials are exclusive to enrolled/paid students.
+  if(mat && !mat.isFreeDemo && !(isEnrolled()||isAdmin())){ openEnrollModal('materialsLocked'); return; }
   // Same reasoning as previewMaterial(): a pasted link has no PDF bytes to watermark, so
   // trigger a direct download of the actual file instead of generating a placeholder PDF.
   if(mat && mat.url && !mat.url.startsWith('data:')){
@@ -2681,10 +2700,11 @@ function adminQuestionsView(){
     <span class="text-[11px] muted">— set per test below via "+ New Test" or "Edit Test Info"</span>
   </div>` : ''}
   <div class="flex flex-wrap gap-2 mb-4 items-center">
-    <select onchange="qbTestId=this.value;renderAdminBody()" class="rounded-lg px-3 py-2 text-xs">${tests.map(t=>`<option value="${t.id}" ${t.id===qbTestId?'selected':''}>${t.title}${t.subCategory?' — '+t.subCategory:''} ${t.isDemo?'(Free Demo)':''}</option>`).join('')}</select>
+    <select onchange="qbTestId=this.value;renderAdminBody()" class="rounded-lg px-3 py-2 text-xs">${tests.map(t=>`<option value="${t.id}" ${t.id===qbTestId?'selected':''}>${t.title}${t.subCategory?' — '+t.subCategory:''} ${t.isDemo?'(Free Demo)':''}${(t.adminUnlocked&&!t.isDemo)?'(Unlocked)':''}</option>`).join('')}</select>
     <button onclick="addNewMockTest()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">+ New Test</button>
     ${test?`
     <button onclick="toggleDemoFlag()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">${test.isDemo?'Mark as Premium':'Mark as Free Demo'}</button>
+    <button onclick="toggleAdminUnlock()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">${test.adminUnlocked?'Lock for Non-Enrolled':'Unlock for Everyone'}</button>
     <button onclick="editTestMeta()" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold">Edit Test Info</button>
     <button onclick="printOfflinePaper('mock')" class="btn-ghost rounded-lg px-3 py-2 text-xs font-bold flex items-center gap-1"><i data-lucide="printer" class="w-3.5 h-3.5"></i>Print / Export Offline Paper</button>
     <button onclick="deleteTest('mock')" class="rounded-lg px-3 py-2 text-xs font-bold bg-red-600 text-white flex items-center gap-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete Test</button>`:''}
@@ -2744,10 +2764,13 @@ function addNewMockTest(){
   const durationInput = prompt('Test duration (in minutes):', '20');
   const durationMin = durationInput!==null && parseFloat(durationInput)>0 ? parseFloat(durationInput) : 20;
   const subCategory = promptSubCategory(qbSubject);
-  const nt = {id:uid('mt'), subject:qbSubject, title, isDemo:false, examCategory, durationMin, subCategory, marksCorrect:2, marksWrong:0.5, questions:[]};
+  const nt = {id:uid('mt'), subject:qbSubject, title, isDemo:false, adminUnlocked:false, examCategory, durationMin, subCategory, marksCorrect:2, marksWrong:0.5, questions:[]};
   DB.mockTests[qbSubject].push(nt); qbTestId=nt.id; saveDB(); renderAdminBody();
 }
 function toggleDemoFlag(){ const test = currentTestRef('mock'); if(test){ test.isDemo=!test.isDemo; saveDB(); renderAdminBody(); } }
+// Independent of the Free Demo flag: lets the admin manually open up (or re-restrict) a
+// specific paid/enrolled-only test for everyone, at any time, without changing its Demo status.
+function toggleAdminUnlock(){ const test = currentTestRef('mock'); if(test){ test.adminUnlocked=!test.adminUnlocked; saveDB(); renderAdminBody(); } }
 function editTestMeta(){
   const test = currentTestRef('mock'); if(!test) return;
   const title = prompt('Test title:', test.title); if(title===null) return;
@@ -3001,6 +3024,9 @@ function adminMaterialsView(){
       </label>
       <input id="newMatUrl" type="text" placeholder="...or paste a direct PDF URL instead" class="rounded-lg px-3 py-2 text-xs">
     </div>
+    <label class="flex items-center gap-2 text-xs font-bold mb-2 cursor-pointer w-fit">
+      <input id="newMatFreeDemo" type="checkbox" class="w-4 h-4 accent-amber-500">Mark as Free Demo (accessible to everyone, not just enrolled students)
+    </label>
     <button onclick="uploadMaterial()" class="btn-gold rounded-lg px-4 py-2 text-xs font-bold flex items-center gap-1.5"><i data-lucide="upload" class="w-3.5 h-3.5"></i>+ Upload Material</button>
     <p class="text-[11px] muted mt-2">Upload a PDF file (stored securely as Base64) or paste a direct PDF link. Either is optional if you just want to reserve a title.</p>
   </div>
@@ -3009,7 +3035,7 @@ function adminMaterialsView(){
       <div class="card2 rounded-xl p-4">
         <p class="text-xs font-bold muted uppercase mb-2">${c[1]}</p>
         <div class="space-y-1">
-          ${(DB.materials[c[0]]||[]).map(m=>`<div class="flex justify-between items-center text-xs card rounded-md px-2 py-1.5"><span>${m.title}${m.subCategory?' — '+m.subCategory:''} <span class="muted">(${m.views||0} views${m.url?', file attached':', no file yet'})</span></span><button onclick="deleteMaterial('${c[0]}','${m.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('') || '<p class="text-[11px] muted">None yet</p>'}
+          ${(DB.materials[c[0]]||[]).map(m=>`<div class="flex justify-between items-center text-xs card rounded-md px-2 py-1.5"><span>${m.title}${m.subCategory?' — '+m.subCategory:''} <span class="${m.isFreeDemo?'text-emerald-400':'gold-text'} font-bold">${m.isFreeDemo?'[Free Demo]':'[Enrolled-Only]'}</span> <span class="muted">(${m.views||0} views${m.url?', file attached':', no file yet'})</span></span><span class="flex items-center gap-2 shrink-0"><button onclick="toggleMaterialFreeDemo('${c[0]}','${m.id}')" class="text-amber-400" title="${m.isFreeDemo?'Mark as Enrolled-Only':'Mark as Free Demo'}"><i data-lucide="${m.isFreeDemo?'lock':'unlock'}" class="w-3.5 h-3.5"></i></button><button onclick="deleteMaterial('${c[0]}','${m.id}')" class="text-red-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></span></div>`).join('') || '<p class="text-[11px] muted">None yet</p>'}
         </div>
       </div>`).join('')}
   </div>`;
@@ -3040,7 +3066,8 @@ function uploadMaterial(){
   if(!title){ alert('Please enter a material title.'); return; }
   if(!DB.materials[cat]) DB.materials[cat] = [];
   const finalize = (fileUrl)=>{
-    DB.materials[cat].push({id:uid('mat'), title, url: fileUrl||'', subCategory, views:0});
+    const isFreeDemo = document.getElementById('newMatFreeDemo').checked;
+    DB.materials[cat].push({id:uid('mat'), title, url: fileUrl||'', subCategory, isFreeDemo, views:0});
     saveDB(); renderAdminBody();
   };
   if(file){
@@ -3054,6 +3081,9 @@ function uploadMaterial(){
   }
 }
 function deleteMaterial(cat,id){ if(!confirm('Delete this material permanently?')) return; DB.materials[cat]=DB.materials[cat].filter(m=>m.id!==id); saveDB(); renderAdminBody(); }
+// Lets the admin flip a material's access between "Free Demo" (everyone) and "Enrolled-Only"
+// at any time, without needing to re-upload it.
+function toggleMaterialFreeDemo(cat,id){ const m=(DB.materials[cat]||[]).find(x=>x.id===id); if(m){ m.isFreeDemo=!m.isFreeDemo; saveDB(); renderAdminBody(); } }
 
 /* --- Batch Manager --- */
 function adminBatchesView(){
@@ -3077,9 +3107,13 @@ function adminBatchesView(){
 function addBatch(){
   const name = prompt('Batch name (e.g. "SSC GD Special"):'); if(!name) return;
   const examCategory = prompt('Exam category tag (e.g. "WBP Constable", "Railway (RRB)", "SSC GD"):', 'All Exams') || 'All Exams';
+  // "What's Included" — shown as a checklist on the student Batches page. Admin enters each
+  // item separated by a comma; falls back to the existing default set if left unchanged/cancelled.
+  const featuresInput = prompt("What's Included — list each item separated by a comma (shown on the student Batches page):", defaultBatchFeatures().join(', '));
+  const features = (featuresInput===null ? defaultBatchFeatures().join(', ') : featuresInput).split(',').map(f=>f.trim()).filter(Boolean);
   // Pricing is standardized across the portal at ₹300 / Month for every batch.
   DB.batches.push({id:uid('bt'), name, price:300, active:true, examCategory,
-    features:['Full access to all Mocks','PYQ Hub with multi-attempt analysis','Daily Quizzes','Detailed Analysis','Unlimited Re-attempts'],
+    features: features.length ? features : defaultBatchFeatures(),
     timetable:[['Mon-Fri','Regular Classes']]});
   saveDB(); renderAdminBody();
 }
@@ -3087,8 +3121,12 @@ function editBatch(id){
   const b = DB.batches.find(x=>x.id===id); if(!b) return;
   const name = prompt('Batch name:', b.name); if(name===null) return;
   const examCategory = prompt('Exam category tag:', b.examCategory||'All Exams'); if(examCategory===null) return;
+  // "What's Included" — shown as a checklist on the student Batches page.
+  const featuresInput = prompt("What's Included — list each item separated by a comma (shown on the student Batches page):", (b.features&&b.features.length?b.features:defaultBatchFeatures()).join(', ')); if(featuresInput===null) return;
   // Pricing is fixed portal-wide at ₹300 / Month and is not editable per-batch.
   b.name = name; b.price = 300; b.examCategory = examCategory.trim()||b.examCategory;
+  const features = featuresInput.split(',').map(f=>f.trim()).filter(Boolean);
+  b.features = features.length ? features : defaultBatchFeatures();
   saveDB(); renderAdminBody();
 }
 function toggleBatchActive(id){ const b=DB.batches.find(x=>x.id===id); if(b){ b.active=!b.active; saveDB(); renderAdminBody(); } }
