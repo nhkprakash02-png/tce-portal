@@ -1293,6 +1293,29 @@ function openAttemptSelector(testId){
       </div>
     </div>`);
 }
+/* ---------- MOCK TEST ACCESS ENFORCEMENT (centralized) ---------- */
+// Mirrors: userAdmin || isFree || (adminUnlocked && userEnrolled).
+// Field names matched to this app's actual mock-test data model: isDemo (free demo flag,
+// with mock.price===0 also honored if a price field is ever added) and adminUnlocked
+// (the per-test "Unlock for Enrolled Students" flag set in the Mock Manager).
+function canAccessMock(mock){
+  const isFree = mock.isDemo === true || mock.price === 0;
+  const adminUnlocked = mock.adminUnlocked === true;
+  const userEnrolled = typeof isEnrolled === 'function' ? isEnrolled() : window.isEnrolled;
+  const userAdmin = typeof isAdmin === 'function' ? isAdmin() : window.isAdmin;
+  return !!(userAdmin || isFree || (adminUnlocked && userEnrolled));
+}
+function handleMockAccess(mock, onGranted){
+  if(canAccessMock(mock)){
+    if(typeof onGranted === 'function') onGranted(mock);
+  } else {
+    if(typeof openEnrollModal === 'function'){
+      openEnrollModal('locked');
+    } else {
+      alert('This mock test is for enrolled students only.');
+    }
+  }
+}
 function initMocksTab(){
   document.querySelectorAll('[id^="mst_"]').forEach(b=>b.classList.remove('tab-active'));
   const active = document.getElementById('mst_'+mockSubjectTab); if(active) active.classList.add('tab-active');
@@ -1306,11 +1329,9 @@ function initMocksTab(){
   // Enrollment alone no longer grants blanket access to every paid Mock Test — the admin
   // now curates which paid tests are actually available, per test, via the "Unlock for
   // Enrolled Students" control in the Mock Manager. isAdmin() still always sees everything.
-  const enrolled = isEnrolled();
-  const adminViewing = isAdmin();
   const user = getCurrentUser();
   list.innerHTML = tests.length ? tests.map((t)=>{
-    const locked = !t.isDemo && !adminViewing && !(enrolled && t.adminUnlocked);
+    const locked = !canAccessMock(t);
     const attempts = DB.submissions.filter(s=>s.testId===t.id && user && s.studentId===user.id).length;
     return `
     <div class="card glow-border rounded-2xl p-5 flex flex-col">
@@ -2218,6 +2239,25 @@ function tplMaterials(){
   </div>` : '<div class="mb-6"></div>'}
   <div id="materialsList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
 }
+/* ---------- STUDY MATERIAL ACCESS ENFORCEMENT (centralized) ---------- */
+// Mirrors: userAdmin || userEnrolled || isFreeDemo.
+function canAccessMaterial(material){
+  const isFreeDemo = material.isFreeDemo === true || material.isDemo === true;
+  const userEnrolled = typeof isEnrolled === 'function' ? isEnrolled() : window.isEnrolled;
+  const userAdmin = typeof isAdmin === 'function' ? isAdmin() : window.isAdmin;
+  return !!(userAdmin || userEnrolled || isFreeDemo);
+}
+function handleMaterialAccess(material, onGranted){
+  if(canAccessMaterial(material)){
+    if(typeof onGranted === 'function') onGranted(material);
+  } else {
+    if(typeof openEnrollModal === 'function'){
+      openEnrollModal('materialsLocked');
+    } else {
+      alert('This study material is for enrolled students only.');
+    }
+  }
+}
 function initMaterialsTab(){
   document.querySelectorAll('[id^="mc_"]').forEach(b=>b.classList.remove('tab-active'));
   const active = document.getElementById('mc_'+materialCat); if(active) active.classList.add('tab-active');
@@ -2227,7 +2267,7 @@ function initMaterialsTab(){
   let mats = DB.materials[materialCat]||[];
   if(materialSubCat!=='all') mats = mats.filter(m=>m.subCategory===materialSubCat);
   list.innerHTML = mats.length? mats.map(m=>{
-    const locked = !m.isFreeDemo && !(isEnrolled()||isAdmin());
+    const locked = !canAccessMaterial(m);
     return `
     <div class="card glow-border rounded-2xl p-5">
       <i data-lucide="file-text" class="w-8 h-8 gold-text mb-3"></i>
@@ -2306,7 +2346,7 @@ async function previewMaterial(id, cat){
   // Everything else still requires login, then the enrolled/paid access check.
   if(!isFreeDemo){
     if(!user){ alert('Please login to view watermarked materials.'); openLoginModal(); return; }
-    if(mat && !(isEnrolled()||isAdmin())){ openEnrollModal('materialsLocked'); return; }
+    if(mat && !canAccessMaterial(mat)){ openEnrollModal('materialsLocked'); return; }
   }
   incrementMaterialView(id, cat);
   // A material set via a pasted link (as opposed to an actual uploaded PDF file, which is
@@ -2337,7 +2377,7 @@ async function downloadMaterial(id, cat){
   // Everything else still requires login, then the enrolled/paid access check.
   if(!isFreeDemo){
     if(!user){ alert('Please login to download watermarked materials.'); openLoginModal(); return; }
-    if(mat && !(isEnrolled()||isAdmin())){ openEnrollModal('materialsLocked'); return; }
+    if(mat && !canAccessMaterial(mat)){ openEnrollModal('materialsLocked'); return; }
   }
   // Same reasoning as previewMaterial(): a pasted link has no PDF bytes to watermark, so
   // trigger a direct download of the actual file instead of generating a placeholder PDF.
