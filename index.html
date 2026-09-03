@@ -267,8 +267,8 @@ let batchesDataReady = (DEMO_MODE || !fbDB);
 /* =========================================================================
    ADMIN CREDENTIALS (password can be overridden via Admin Settings tab)
 ========================================================================= */
-const ADMIN_EMAIL = "nhkprakash02@gmail.com";
-const ADMIN_PASSWORD_DEFAULT = "A@a123456";
+const ADMIN_EMAIL = "tcenahata@gmail.com";
+const ADMIN_PASSWORD_DEFAULT = "X@x1234567";
 // Admin credentials are fixed and not editable from within the app (no in-app password change UI).
 function getAdminPassword(){ return ADMIN_PASSWORD_DEFAULT; }
 
@@ -437,10 +437,10 @@ function seedDB(){
         timetable:[["Mon / Wed / Fri","Math & GK"],["Tue / Thu","Reasoning & General Science"],["Sunday","Full Mock Test"]]}
     ],
     mentors: [
-      {id:uid('mn'), name:"Tanujoy Mallick", subject:"General Studies", phone:"919749587349", photo:""},
-      {id:uid('mn'), name:"Prakash Sarkar", subject:"Mathematics", phone:"917384644030", photo:""},
-      {id:uid('mn'), name:"Maharup Tarafder", subject:"General Science, Static GK & Current Affairs", phone:"918327416813", photo:""},
-      {id:uid('mn'), name:"Pranab Sadhukhan", subject:"Reasoning & English", phone:"917407879095", photo:""}
+      {id:uid('mn'), name:"Tanujoy Mallick", subject:"General Studies", phone:"919749587349", photo:"tanujoy.png"},
+      {id:uid('mn'), name:"Prakash Sarkar", subject:"Mathematics", phone:"917384644030", photo:"prakash.png"},
+      {id:uid('mn'), name:"Maharup Tarafder", subject:"General Science, Static GK & Current Affairs", phone:"918327416813", photo:"maharup.png"},
+      {id:uid('mn'), name:"Pranab Sadhukhan", subject:"Reasoning & English", phone:"917407879095", photo:"pranab.png"}
     ]
   };
 }
@@ -482,6 +482,11 @@ function normalizeDB(db){
     if(!db.examCategories.includes("Railway (RRB)")) db.examCategories.push("Railway (RRB)");
   }
   (db.mentors||[]).forEach(m=>{ if(m.name==="Tanujoy Mallick"){ m.subject="General Studies"; delete m.nameBn; } });
+  // Mentor photos: backfill the uploaded PNG filenames onto already-saved mentor records
+  // (fresh installs already get these from seedDB() above) so the mentors section shows
+  // the real photos instead of falling back to text initials.
+  const mentorPhotoByName = {"Tanujoy Mallick":"tanujoy.png","Prakash Sarkar":"prakash.png","Maharup Tarafder":"maharup.png","Pranab Sadhukhan":"pranab.png"};
+  (db.mentors||[]).forEach(m=>{ if(!m.photo && mentorPhotoByName[m.name]) m.photo = mentorPhotoByName[m.name]; });
   return db;
 }
 
