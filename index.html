@@ -178,7 +178,7 @@
     <p class="text-xs tracking-widest muted uppercase mb-1">Meet the team</p>
     <h2 class="font-display font-800 text-2xl sm:text-3xl">Our <span class="gold-text">Expert Mentors</span></h2>
   </div>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="mentorsGrid"></div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-10" id="mentorsGrid"></div>
 </section>
 
 <!-- =============== FOOTER =============== -->
@@ -921,8 +921,10 @@ function renderMentors(){
   document.getElementById('mentorsGrid').innerHTML = DB.mentors.map(m=>{
     const photoSrc = MENTOR_PHOTO_OVERRIDE[m.name] || m.photo;
     return `
-    <div class="card glow-border rounded-2xl p-5 text-center">
-      ${photoSrc ? `<img src="${photoSrc}" class="w-16 h-16 mx-auto rounded-full object-cover mb-3" alt="${m.name}">` : `<div class="w-16 h-16 mx-auto rounded-full gold-grad flex items-center justify-center font-display font-800 text-ink text-xl mb-3">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`}
+    <div class="card glow-border rounded-2xl pt-0 pb-5 px-5 text-center">
+      <div class="relative -mt-8 mb-3 flex justify-center">
+        ${photoSrc ? `<img src="${photoSrc}" class="w-16 h-16 rounded-full object-cover ring-4 ring-[var(--bg)] shadow-lg" alt="${m.name}">` : `<div class="w-16 h-16 rounded-full gold-grad flex items-center justify-center font-display font-800 text-ink text-xl ring-4 ring-[var(--bg)] shadow-lg">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`}
+      </div>
       <h3 class="font-display font-700 text-sm">${m.name}</h3>
       <p class="text-xs gold-text font-semibold mt-0.5">Tutor & Mentor</p>
       <p class="text-xs muted mt-1">${m.subject}</p>
