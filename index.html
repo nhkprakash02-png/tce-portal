@@ -911,10 +911,18 @@ function renderTicker(){
 /* =========================================================================
    MENTORS (Admin Managed)
 ========================================================================= */
+// These 4 mentor photos are physically uploaded to the project root and must always
+// render, regardless of what value happens to be persisted in Firestore for m.photo
+// (e.g. left blank, or blanked out again via a future Admin edit that doesn't touch
+// photo). Matched by name; any other/future mentor still uses DB.mentors' own photo
+// field (falling back to initials) exactly as before.
+const MENTOR_PHOTO_OVERRIDE = {"Tanujoy Mallick":"tanujoy.png","Prakash Sarkar":"prakash.png","Maharup Tarafder":"maharup.png","Pranab Sadhukhan":"pranab.png"};
 function renderMentors(){
-  document.getElementById('mentorsGrid').innerHTML = DB.mentors.map(m=>`
+  document.getElementById('mentorsGrid').innerHTML = DB.mentors.map(m=>{
+    const photoSrc = MENTOR_PHOTO_OVERRIDE[m.name] || m.photo;
+    return `
     <div class="card glow-border rounded-2xl p-5 text-center">
-      ${m.photo ? `<img src="${m.photo}" class="w-16 h-16 mx-auto rounded-full object-cover mb-3" alt="${m.name}">` : `<div class="w-16 h-16 mx-auto rounded-full gold-grad flex items-center justify-center font-display font-800 text-ink text-xl mb-3">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`}
+      ${photoSrc ? `<img src="${photoSrc}" class="w-16 h-16 mx-auto rounded-full object-cover mb-3" alt="${m.name}">` : `<div class="w-16 h-16 mx-auto rounded-full gold-grad flex items-center justify-center font-display font-800 text-ink text-xl mb-3">${m.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`}
       <h3 class="font-display font-700 text-sm">${m.name}</h3>
       <p class="text-xs gold-text font-semibold mt-0.5">Tutor & Mentor</p>
       <p class="text-xs muted mt-1">${m.subject}</p>
@@ -922,7 +930,8 @@ function renderMentors(){
         class="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#25D366] text-white text-xs font-bold">
         <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp
       </a>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   lucide.createIcons();
 }
 
