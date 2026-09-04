@@ -1129,12 +1129,46 @@ function googleSignIn(){
   finalizeLogin({name, email:name.toLowerCase().replace(/\\s+/g,'.')+'@gmail.com', phone:''});
 }
 function finalizeLogin(profile){
-  let student = DB.students.find(s=> (profile.email && s.email===profile.email) || (profile.phone && s.phone===profile.phone));
-  if(!student){
-    student = {id:uid('st'), name:profile.name, phone:profile.phone||'', email:profile.email||'', address:'', joinDate:new Date().toISOString().slice(0,10), registeredAt:new Date().toISOString(), paymentStatus:'Not Enrolled', batch:'—', pendingReview:true};
-    DB.students.push(student); saveDB();
-  }
+  const existing = DB.students.find(s=> (profile.email && (s.email||'').toLowerCase()===(profile.email||'').toLowerCase()) || (profile.phone && s.phone===profile.phone));
+  if(existing){ setCurrentUser(existing); closeModal(); setTab('dashboard'); return; }
+  // First-time Google sign-in: don't auto-create the account. Collect phone + a password
+  // (Google auth alone doesn't give us either) via a pre-filled registration modal first.
+  openGoogleRegisterModal(profile);
+}
+function openGoogleRegisterModal(profile){
+  window.__googleRegProfile = profile;
+  openModal(`
+    <div class="card glow-border rounded-2xl p-6">
+      <div class="flex justify-between items-center mb-4"><h3 class="font-display font-700 text-lg">Complete Your Profile</h3><button onclick="closeModal()"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <p class="text-xs muted mb-4">You're signed in with Google — just a few more details to finish setting up your account.</p>
+      <div class="space-y-3">
+        <input id="greg_name" type="text" value="${(profile.name||'').replace(/"/g,'&quot;')}" placeholder="Full Name" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="greg_email" type="email" value="${(profile.email||'').replace(/"/g,'&quot;')}" readonly placeholder="Email" class="w-full rounded-lg px-3 py-2.5 text-sm opacity-70 cursor-not-allowed">
+        <input id="greg_phone" type="tel" placeholder="Phone Number" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="greg_password" type="password" placeholder="Password" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <input id="greg_confirm" type="password" placeholder="Confirm Password" onkeydown="if(event.key==='Enter')completeGoogleRegistration()" class="w-full rounded-lg px-3 py-2.5 text-sm">
+        <p id="greg_error" class="hidden text-xs text-red-400"></p>
+        <button onclick="completeGoogleRegistration()" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">Complete Registration</button>
+      </div>
+    </div>`);
+}
+function completeGoogleRegistration(){
+  const profile = window.__googleRegProfile || {};
+  const name = (document.getElementById('greg_name').value||'').trim();
+  const email = profile.email || '';
+  const phone = (document.getElementById('greg_phone').value||'').trim();
+  const password = document.getElementById('greg_password').value;
+  const confirm = document.getElementById('greg_confirm').value;
+  const errEl = document.getElementById('greg_error');
+  const showErr = (msg)=>{ if(errEl){ errEl.textContent = msg; errEl.classList.remove('hidden'); } else alert(msg); };
+  if(!name || !phone || !password || !confirm){ showErr('Please fill in all fields.'); return; }
+  if(password.length<6){ showErr('Password must be at least 6 characters.'); return; }
+  if(password!==confirm){ showErr('Passwords do not match.'); return; }
+  if(DB.students.some(s=> (s.email||'').toLowerCase()===email.toLowerCase())){ showErr('An account with this email already exists. Please login instead.'); return; }
+  const student = {id:uid('st'), name, email, phone, password, address:'', joinDate:new Date().toISOString().slice(0,10), registeredAt:new Date().toISOString(), paymentStatus:'Not Enrolled', batch:'—', pendingReview:true};
+  DB.students.push(student); saveDB();
   setCurrentUser(student); closeModal(); setTab('dashboard');
+  delete window.__googleRegProfile;
 }
 function logoutUser(){ localStorage.removeItem(CUR_KEY); renderNav(); closeModal(); setTab('home'); }
 
