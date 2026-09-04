@@ -1501,7 +1501,7 @@ function beginExam(testId, source, subject){
   const test = findTestById(testId, source, subject);
   if(!test) return;
   const chosenLang = getSelectedInstrLang();
-  const shuffledQ = shuffle(test.questions).map(q=>({...q, options: shuffle(q.options)}));
+  const shuffledQ = shuffle(test.questions);
   examState = {
     testId: test.id, source, subject: subject||test.subject||'pyq', title: test.title, durationSec: test.durationMin*60, remaining: test.durationMin*60,
     marksCorrect: test.marksCorrect, marksWrong: test.marksWrong, questions: shuffledQ,
@@ -2213,7 +2213,7 @@ function beginQuickQuiz(qCount, mins){
   const gkOnly = DB.quizPool.filter(q=>q.subject==='gk');
   if(gkOnly.length===0){ alert('No GK questions are available yet. Please check back soon.'); return; }
   const chosenLang = getSelectedInstrLang();
-  const pool = shuffle(gkOnly).slice(0, Math.min(qCount, gkOnly.length)).map(q=>({...q, options: shuffle(q.options)}));
+  const pool = shuffle(gkOnly).slice(0, Math.min(qCount, gkOnly.length));
   closeModal();
   examState = {
     testId: 'quiz_'+qCount, source:'quiz', subject:'quiz', title: `Quick Quiz — GK — ${pool.length} Questions`, durationSec: mins*60, remaining: mins*60,
