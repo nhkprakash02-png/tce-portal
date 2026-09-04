@@ -1716,7 +1716,7 @@ function updateTimerDisplay(){
   const el = document.getElementById('examTimer'); if(el) el.textContent = `${h}:${m}:${sec}`;
 }
 function attachAntiCheat(){
-  window.__examBlurHandler = ()=>{
+  const triggerViolation = ()=>{
     if(!examState) return;
     examState.violations++;
     if(examState.violations>=3){ finishExam(false, true); return; }
@@ -1725,16 +1725,24 @@ function attachAntiCheat(){
         <div class="card glow-border rounded-2xl p-6 max-w-sm text-center">
           <i data-lucide="alert-triangle" class="w-10 h-10 text-red-500 mx-auto mb-3"></i>
           <h3 class="font-display font-700 text-lg mb-2">Warning ${examState.violations}/3</h3>
-          <p class="text-sm muted mb-4">Switching tabs / leaving fullscreen during the exam is not allowed. Your test will be <b>auto-submitted</b> on the 3rd violation.</p>
-          <button onclick="document.getElementById('examWarnRoot').innerHTML=''" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">I Understand</button>
+          <p class="text-sm muted mb-4">Switching tabs, minimizing the window, or leaving full-screen during the exam is not allowed. Your test will be <b>auto-submitted</b> on the 3rd violation.</p>
+          <button onclick="document.getElementById('examWarnRoot').innerHTML=''; requestFullscreenSafe();" class="w-full btn-gold rounded-lg py-2.5 text-sm font-bold">I Understand</button>
         </div>
       </div>`;
     lucide.createIcons();
   };
+  window.__examBlurHandler = triggerViolation;
+  window.__examVisibilityHandler = ()=>{ if(document.hidden && examState) triggerViolation(); };
+  window.__examFullscreenHandler = ()=>{ if(examState && !document.fullscreenElement) triggerViolation(); };
   window.addEventListener('blur', window.__examBlurHandler);
-  document.addEventListener('visibilitychange', ()=>{ if(document.hidden && examState) window.__examBlurHandler(); });
+  document.addEventListener('visibilitychange', window.__examVisibilityHandler);
+  document.addEventListener('fullscreenchange', window.__examFullscreenHandler);
 }
-function detachAntiCheat(){ if(window.__examBlurHandler) window.removeEventListener('blur', window.__examBlurHandler); }
+function detachAntiCheat(){
+  if(window.__examBlurHandler) window.removeEventListener('blur', window.__examBlurHandler);
+  if(window.__examVisibilityHandler) document.removeEventListener('visibilitychange', window.__examVisibilityHandler);
+  if(window.__examFullscreenHandler) document.removeEventListener('fullscreenchange', window.__examFullscreenHandler);
+}
 
 function confirmSubmitExam(){
   const st = examState;
