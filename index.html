@@ -1128,6 +1128,7 @@ function signupUser(){
 function googleSignIn(){
   if(!DEMO_MODE && fbAuth){
     const provider = new firebase.auth.GoogleAuthProvider();
+    if(isMobileDevice()){ fbAuth.signInWithRedirect(provider).catch(e=>alert('Google sign-in failed: '+e.message)); return; }
     fbAuth.signInWithPopup(provider).then(res=>{
       const u = res.user; finalizeLogin({name:u.displayName||'Student', email:u.email, phone:u.phoneNumber||''});
     }).catch(e=>{
