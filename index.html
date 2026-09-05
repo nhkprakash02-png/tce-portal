@@ -255,7 +255,15 @@ const firebaseConfig = {
 const DEMO_MODE = false;
 let fbApp=null, fbAuth=null, fbDB=null, fbStorage=null;
 if(!DEMO_MODE){
-  try{ fbApp = firebase.initializeApp(firebaseConfig); fbAuth = firebase.auth(); fbDB = firebase.firestore(); fbStorage = firebase.storage(); }
+  try{
+    fbApp = firebase.initializeApp(firebaseConfig); fbAuth = firebase.auth(); fbDB = firebase.firestore(); fbStorage = firebase.storage();
+    // Completes a Google sign-in that fell back to signInWithRedirect() (see googleSignIn()) —
+    // without this, a user redirected back to the page after redirect-based sign-in would never
+    // actually get logged in.
+    fbAuth.getRedirectResult().then(res=>{
+      if(res && res.user){ const u=res.user; finalizeLogin({name:u.displayName||'Student', email:u.email, phone:u.phoneNumber||''}); }
+    }).catch(e=>{ console.warn('Google redirect sign-in failed', e); });
+  }
   catch(e){ console.warn('Firebase init failed, using demo mode', e); }
 }
 // Tracks whether the real Firestore "batches" data has finished loading yet. Batches are
@@ -1119,9 +1127,15 @@ function signupUser(){
 }
 function googleSignIn(){
   if(!DEMO_MODE && fbAuth){
-    fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(res=>{
+    const provider = new firebase.auth.GoogleAuthProvider();
+    fbAuth.signInWithPopup(provider).then(res=>{
       const u = res.user; finalizeLogin({name:u.displayName||'Student', email:u.email, phone:u.phoneNumber||''});
-    }).catch(e=>alert('Google sign-in failed: '+e.message));
+    }).catch(e=>{
+      const popupIssue = ['auth/popup-blocked','auth/popup-closed-by-user','auth/cancelled-popup-request','auth/operation-not-supported-in-this-environment'].includes(e.code);
+      if(popupIssue){ fbAuth.signInWithRedirect(provider).catch(e2=>alert('Google sign-in failed: '+e2.message)); return; }
+      if(e.code==='auth/unauthorized-domain'){ alert('Google sign-in failed: this website\'s domain is not yet added to the Authorized Domains list in Firebase Authentication settings. Please contact the site admin.'); return; }
+      alert('Google sign-in failed: '+e.message);
+    });
     return;
   }
   const name = prompt("Demo Google Sign-In\\nEnter your name to simulate Google login:");
@@ -2255,7 +2269,7 @@ function beginQuickQuiz(qCount, mins){
   const gkOnly = DB.quizPool.filter(q=>q.subject==='gk');
   if(gkOnly.length===0){ alert('No GK questions are available yet. Please check back soon.'); return; }
   const chosenLang = getSelectedInstrLang();
-  const pool = shuffle(gkOnly).slice(0, Math.min(qCount, gkOnly.length));
+  const pool = shuffle(gkOnly).slice(0, Math.min(qCount, gkOnly.length)).map(q=>({...q, correct: resolveCorrectKey(q)}));
   closeModal();
   examState = {
     testId: 'quiz_'+qCount, source:'quiz', subject:'quiz', title: `Quick Quiz — GK — ${pool.length} Questions`, durationSec: mins*60, remaining: mins*60,
