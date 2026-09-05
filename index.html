@@ -1181,7 +1181,7 @@ function openEnrollModal(context, batchId){
   const batch = batchId ? DB.batches.find(b=>b.id===batchId) : DB.batches[0];
   const amount = batch ? batch.price : 300;
   const batchName = batch ? batch.name : "TCE Batch";
-  const upiId = "7384644030@ybl";
+  const upiId = "17tanujoy-2@oksbi";
   const upiUri = `upi://pay?pa=${upiId}&pn=TCE%20Coaching&am=${amount}&cu=INR&tn=${encodeURIComponent(batchName)}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUri)}`;
   const mobile = isMobileDevice();
@@ -1192,11 +1192,11 @@ function openEnrollModal(context, batchId){
       ${mobile ? `
       <button onclick="window.location.href='${upiUri}'" class="w-full mb-4 flex items-center justify-center gap-2 btn-gold rounded-lg py-3 text-sm font-bold">
         <i data-lucide="smartphone" class="w-4 h-4"></i> Pay ${priceLabel(amount)} via GPay / PhonePe / Paytm
-      </button>` : `
+      </button>` : ''}
       <div class="flex flex-col items-center card2 rounded-xl p-4 mb-4">
-        <img src="${qrSrc}" alt="UPI QR Code" class="w-40 h-40 rounded-lg bg-white p-1">
-        <p class="text-xs muted mt-2">Scan with GPay / PhonePe / Paytm — Amount ${priceLabel(amount)}</p>
-      </div>`}
+        <img src="${qrSrc}" alt="UPI QR Code" class="w-40 h-40 max-w-full rounded-lg bg-white p-1">
+        <p class="text-xs muted mt-2 text-center">Scan with GPay / PhonePe / Paytm — Amount ${priceLabel(amount)}</p>
+      </div>
       <div class="flex items-center justify-between card2 rounded-lg px-3 py-2.5 mb-4">
         <div><p class="text-[10px] muted uppercase">UPI ID</p><p class="font-semibold text-sm">${upiId}</p></div>
         <button onclick="navigator.clipboard.writeText('${upiId}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1200)" class="px-3 py-1.5 rounded-md btn-gold text-xs font-bold">Copy</button>
@@ -2933,12 +2933,28 @@ function addQuestionToTest(kind){
   test.questions.push({id:uid('q'), textEn:en, textBn:bn, options:[{key:'A',textEn:a,textBn:''},{key:'B',textEn:b,textBn:''},{key:'C',textEn:c,textBn:''},{key:'D',textEn:d,textBn:''}], correct, explanation:exp, solutionImg:solimg});
   saveDB(); renderAdminBody();
 }
+function resolveCorrectKey(q){
+  let c = q.correct;
+  if(c===undefined || c===null || c===''){
+    c = q.correctAnswer!==undefined ? q.correctAnswer : (q.answer!==undefined ? q.answer : (q.correctIndex!==undefined ? q.correctIndex : q.correctOption));
+  }
+  if(typeof c==='number' && c>=0 && c<=3) return String.fromCharCode(65+c);
+  if(typeof c==='string'){
+    const t = c.trim();
+    if(/^[A-Da-d]$/.test(t)) return t.toUpperCase();
+    if(/^[0-3]$/.test(t)) return String.fromCharCode(65+parseInt(t,10));
+    const opts = q.options||[];
+    const match = opts.find(o=>(o.textEn||o.text||'').trim().toLowerCase()===t.toLowerCase());
+    if(match) return match.key || String.fromCharCode(65+opts.indexOf(match));
+  }
+  return 'A';
+}
 function bulkUploadQuestions(kind){
   const test = currentTestRef(kind);
   const raw = document.getElementById('bulkJson').value.trim();
   try{
     const arr = JSON.parse(raw);
-    arr.forEach(q=>{ test.questions.push({id:uid('q'), textEn:q.textEn||'', textBn:q.textBn||'', options:q.options||[], correct:q.correct||'A', explanation:q.explanation||'', solutionImg:q.solutionImg||''}); });
+    arr.forEach(q=>{ test.questions.push({id:uid('q'), textEn:q.textEn||'', textBn:q.textBn||'', options:q.options||[], correct:resolveCorrectKey(q), explanation:q.explanation||'', solutionImg:q.solutionImg||''}); });
     saveDB(); renderAdminBody();
   }catch(e){ alert('Invalid JSON: '+e.message); }
 }
@@ -3126,7 +3142,7 @@ function bulkUploadGkQuiz(){
   const raw = document.getElementById('gkBulkJson').value.trim();
   try{
     const arr = JSON.parse(raw);
-    arr.forEach(q=>{ DB.quizPool.push({id:uid('q'), subject:'gk', textEn:q.textEn||'', textBn:q.textBn||'', options:q.options||[], correct:q.correct||'A', explanation:q.explanation||'', solutionImg:q.solutionImg||''}); });
+    arr.forEach(q=>{ DB.quizPool.push({id:uid('q'), subject:'gk', textEn:q.textEn||'', textBn:q.textBn||'', options:q.options||[], correct:resolveCorrectKey(q), explanation:q.explanation||'', solutionImg:q.solutionImg||''}); });
     saveDB(); renderAdminBody();
   }catch(e){ alert('Invalid JSON: '+e.message); }
 }
